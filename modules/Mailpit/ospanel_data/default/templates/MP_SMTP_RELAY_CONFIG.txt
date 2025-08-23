@@ -11,3 +11,4 @@ return-path:         <bounce-address>            # optional - overrides Return-P
 override-from:       <email-address>             # optional - overrides the From email address
 allowed-recipients:  '@example\.com$'            # optional - limit allowed relay addresses or domains
 blocked-recipients:  '@example2\.com$'           # optional - prevent relating to addresses or domains
+preserve-message-ids: <true|false>               # optional - preserve the original Message-IDs when relaying, default false
