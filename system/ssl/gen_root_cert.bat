@@ -13,12 +13,13 @@ del /Q "%ROOT_CA_FILE%" >nul 2>nul
 del /Q "%PERL_CA_ROOT%\cacert.pem" >nul 2>nul
 "%~dp0openssl.exe" ecparam -genkey -name prime256v1 -out "%ROOT_KEY_FILE%"
 "%~dp0openssl.exe" req -x509 -new -sha256 -key "%ROOT_KEY_FILE%" -days 3650 -out "%ROOT_CERT_FILE%" -subj "/emailAddress=root@ospanel.local/C=EU/stateOrProvinceName=Local Network/O=Open Server Panel/CN=Open Server Panel"
-copy "%~dp0..\..\system\ssl\cacert.pem" "%ROOT_CA_FILE%" >nul
+copy "%~dp0..\..\system\ssl\cacert.pem" "%ROOT_CA_FILE%" /b /y >nul
 echo:>> "%ROOT_CA_FILE%"
 echo Open Server Panel Root CA>> "%ROOT_CA_FILE%"
 echo =========================>> "%ROOT_CA_FILE%"
 copy "%ROOT_CA_FILE%" + "%ROOT_CERT_FILE%" "%ROOT_CA_FILE%" /b /y >nul
 echo:>> "%ROOT_CA_FILE%"
-if exist "%PERL_CA_ROOT%\" copy "%ROOT_CA_FILE%" "%PERL_CA_ROOT%\cacert.pem" >nul
+copy "%ROOT_CA_FILE%" "%OSP_DIR%\bin\curl-ca-bundle.crt" /b /y >nul
+if exist "%PERL_CA_ROOT%\" copy "%ROOT_CA_FILE%" "%PERL_CA_ROOT%\cacert.pem" /b /y >nul
 if /i "%1"=="addstore" call "%~dp0add_root_to_certstore.bat"
 endlocal
