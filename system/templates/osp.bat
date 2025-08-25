@@ -347,6 +347,14 @@ if not exist "%OSP_DIR%\system\ssl\gen_root_cert.bat" (
     goto error
 )
 
+:: Downloading current certificate file
+
+"%OSP_DIR%\system\bin\curl.exe" -f -s -L -o "%OSP_DIR%\system\ssl\cacert.pem" https://curl.se/ca/cacert.pem
+if %ERRORLEVEL% neq 0 (
+    set "OSP_ERR_MSG={lang_err_download_cacert_failed}"
+    goto error
+)
+
 :: Removing old certificate
 
 if exist "%OSP_DIR%\data\ssl\root\cert.crt" (
@@ -379,22 +387,6 @@ if %ERRORLEVEL% neq 0 (
 )
 
 "%SystemRoot%\System32\certutil.exe" -urlcache * delete >nul 2>nul
-
-:: Downloading current certificate file
-
-"%OSP_DIR%\system\bin\curl.exe" -f -s -L -o "%OSP_DIR%\system\ssl\cacert.pem" https://curl.se/ca/cacert.pem
-if %ERRORLEVEL% neq 0 (
-    set "OSP_ERR_MSG={lang_err_download_cacert_failed}"
-    goto error
-)
-
-:: Copying to curl bundle
-
-copy "%OSP_DIR%\system\ssl\cacert.pem" "%OSP_DIR%\bin\curl-ca-bundle.crt" /b /y >nul
-if %ERRORLEVEL% neq 0 (
-    set "OSP_ERR_MSG={lang_err_copy_cacert_failed}"
-    goto error
-)
 
 goto end
 
