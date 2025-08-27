@@ -1,0 +1,8 @@
+Usage:
+
+   cwebp [options] -q quality input.png -o output.webp
+
+where quality is between 0 (poor) to 100 (very good).
+Typical value is around 80.
+
+Try -longhelp for an exhaustive list of advanced options.

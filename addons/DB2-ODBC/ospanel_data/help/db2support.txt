@@ -1,0 +1,32 @@
+
+Syntax: db2support [output path]  [-m]
+                                  [-h] [-n <pmr number>]
+                                  [-q] [-s]
+                                  [-su <username>] [-sg <groupname>]
+                                  [-v] [-o <filename>]
+
+
+  -h  -help          Help on what this tool does (display usage info)
+  -m  -html          Generate system output in HTML format
+  -n  -number        PMR number/identifier for current problem, if known
+  -o  -output        Specify the output file name with or without path,
+                     archived in ZIP format. Default output path is the
+                     current directory and default file name is db2support.zip.
+                     Will take precedence if [output path] is also specified.
+  -s  -system_detail Gather detailed hardware and OS info
+  -sg -system_group  Gathers system group information
+  -su -system_user   Gathers system user information
+  -v  -verbose       Verbose output while running
+
+  db2support will archive all files into a compressed file containing
+  either the file name specified by the user (-o option), or the
+  default file name, db2support.zip.
+
+  Any user specified output file names not ending with the ".zip"
+  extension will have this automatically appended by db2support.
+
+ Example of basic invocation:
+
+       db2support .
+
+  

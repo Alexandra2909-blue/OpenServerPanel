@@ -1,0 +1,65 @@
+IBM DATABASE 2 Interactive CLI Sample Program
+(C) COPYRIGHT International Business Machines Corp. 1993,1996
+All Rights Reserved
+Licensed Materials - Property of IBM
+US Government Users Restricted Rights - Use, duplication or
+disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+
+===============================================================================
+DB2 interactive Call Level Interface (CLI) environment
+===============================================================================
+
+The DB2 interactive CLI environment is a multi-purpose design and prototyping 
+tool.
+
+Command syntax
+
+  db2cli [-help] [<mode>]
+
+Command parameters (<mode> values)
+
+  validate
+
+      Validate db2cli.ini and db2dsdriver.cfg configuration files.
+
+  bind
+
+      Bind dynamic packages used by CLI, .NET and JCC applications against the 
+      target database.
+
+  registerdsn
+
+      Register a ODBC DSN from the db2cli.ini and db2dsdriver.cfg files 
+      (Windows only).
+
+  install
+
+      Register and Unregister IBM Data Server Driver for ODBC and CLI.
+
+  refreshldap
+
+      Functionality to refresh dsn entries from LDAP to IBM Data Server Driver 
+      Configuration File.
+
+  execsql
+
+      Execute or prepare the given SQL statements. Can also capture the SQLs in 
+      the PDQXML file when capturemode is enabled in the configuration files.
+
+  writecfg
+
+      Functionality to add/remove dsn or database entries, and to add, modify 
+      and remove the parameters in the db2dsdriver.cfg file.
+
+  -help
+
+      Display db2cli tool help and usage information.
+
+NOTE: For further details of each <mode>, append "-help" option after
+specifying <mode>.
+
+For example:
+
+  1. db2cli validate -help
+  2. db2cli writecfg -help
+
