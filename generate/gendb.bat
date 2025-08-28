@@ -11,9 +11,6 @@ TITLE DB Generator
 start "MariaDB 1 Generator" "%OSP_ROOT_DIR%generate\genmariadb1.bat"
 start "MariaDB 2 Generator" "%OSP_ROOT_DIR%generate\genmariadb2.bat"
 start "MySQL Generator" "%OSP_ROOT_DIR%generate\genmysql.bat"
-call :posgresql PostgreSQL-9.5
-call :posgresql PostgreSQL-9.6
-call :posgresql PostgreSQL-10
 call :posgresql PostgreSQL-11
 call :posgresql PostgreSQL-12
 call :posgresql PostgreSQL-13

@@ -4,13 +4,12 @@
 @echo off
 set "OSP_ROOT_DIR=%~dp0..\"
 chcp 65001 > nul
-call :mariadb MariaDB-10.1
-call :mariadb MariaDB-10.2
-call :mariadb MariaDB-10.3
 call :mariadb MariaDB-10.4
 call :mariadb MariaDB-10.5
 call :mariadb MariaDB-10.6
-call :mariadb MariaDB-10.7
+call :mariadb MariaDB-10.11
+call :mariadb MariaDB-11.4
+call :mariadb MariaDB-11.8
 goto end
 :: --------------------------------------------------------------------------------
 :: INIT MariaDB
