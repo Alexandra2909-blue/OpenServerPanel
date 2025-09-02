@@ -8,8 +8,7 @@ for /d %%D in ("%OSP_ROOT_DIR%generate\config\*") do robocopy "%%D" "%OSP_ROOT_D
 rd    "%OSP_ROOT_DIR%generate\new_data" /s /q 2>nul
 mkdir "%OSP_ROOT_DIR%generate\new_data" 2>nul
 TITLE DB Generator
-start "MariaDB 1 Generator" "%OSP_ROOT_DIR%generate\genmariadb1.bat"
-start "MariaDB 2 Generator" "%OSP_ROOT_DIR%generate\genmariadb2.bat"
+start "MariaDB Generator" "%OSP_ROOT_DIR%generate\genmariadb.bat"
 start "MySQL Generator" "%OSP_ROOT_DIR%generate\genmysql.bat"
 call :posgresql PostgreSQL-11
 call :posgresql PostgreSQL-12
