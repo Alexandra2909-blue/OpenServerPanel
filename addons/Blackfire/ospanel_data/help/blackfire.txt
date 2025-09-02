@@ -1,4 +1,4 @@
-Blackfire version 2.28.31 (c) 2014-2025 Platform.sh
+Blackfire version 2.29.0 (c) 2014-2025 Platform.sh
 Blackfire helps developers manage the performance of their applications
 
 Usage:
@@ -24,6 +24,8 @@ Available commands:
   client:config                        Configure the Blackfire Client
   client:curl, curl                    Profile a URL via curl
   client:run, run                      Run a program to profile
+ doctor                             
+  doctor:check, doctor                 Inspect the current configuration
  open                               
   open:docs                            Open the online Web documentation
   open:support                         Open the web support page
