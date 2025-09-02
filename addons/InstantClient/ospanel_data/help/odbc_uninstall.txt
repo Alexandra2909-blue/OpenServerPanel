@@ -1,1 +1,0 @@
-Some problem occured while deleting the registry key.
