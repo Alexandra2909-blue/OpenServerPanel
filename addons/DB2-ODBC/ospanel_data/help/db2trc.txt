@@ -1,0 +1,32 @@
+STAGE #1 - COLLECTION
+	Usage: db2trc [facility] <command> [-u]
+
+	[facility]
+		db2   - DB2 instance (default)
+		das   - DB2 Administration Server instance
+		cf    - CF Server
+		cfcli - CF Client
+
+	<command>
+		change - Change trace options
+		clear  - Clear the trace buffer
+		dump   - Generate trace dump file
+		info   - Information
+		off    - Disable the trace facility
+		on     - Enable the trace facility
+		stop   - Stop tracing
+
+STAGE #2 - PARSING
+	Usage: db2trc <command> [-u]
+
+	<command>
+		ccfmt          - Dump and format a code coverage trace
+		flow           - Generate control flow diagram
+		format         - Format (includes CLI/ODBC driver traces)
+		formattedFlow  - Generate global flow diagram
+		info           - Information
+		perffmt        - Format a performance trace
+		perfrep        - Format a performance report
+
+For more information add the "-u" option to any of the above commands
+
