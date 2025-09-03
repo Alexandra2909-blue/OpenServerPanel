@@ -115,7 +115,7 @@
     },
     {
         "name": "ospanel_sys_prep_tool",
-        "url": "https://github.com/OSPanel/SystemPreparationTool/releases/download/latest/ospanel_sys_prep_tool.exe",
+        "url": "https://github.com/OSPanel/SystemPreparationTool/releases/latest/download/ospanel_sys_prep_tool.exe",
         "direct_download": true,
         "target_name": "ospanel_sys_prep_tool.exe"
     }]
