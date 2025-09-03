@@ -276,25 +276,22 @@ function Process-InstantClient {
     <#
     .SYNOPSIS
     Special processing for InstantClient addon
-    
-    .PARAMETER Version
-    InstantClient version (e.g., 23.9.0.25.07)
-    
+       
     .PARAMETER DestDir
     Destination directory
     #>
-    param([string]$Version, [string]$DestDir)
+    param([string]$DestDir)
     
     try {
-        Write-Progress "INSTANTCLIENT" "Special processing InstantClient version $Version"
+        Write-Progress "INSTANTCLIENT" "Special processing InstantClient"
         
         # List of archives to download with version substitution
         $archives = @(
-            "https://download.oracle.com/otn_software/nt/instantclient/2390000/instantclient-odbc-windows.x64-$Version.zip",
-            "https://download.oracle.com/otn_software/nt/instantclient/2390000/instantclient-jdbc-windows.x64-$Version.zip",
-            "https://download.oracle.com/otn_software/nt/instantclient/2390000/instantclient-tools-windows.x64-$Version.zip",
-            "https://download.oracle.com/otn_software/nt/instantclient/2390000/instantclient-sqlplus-windows.x64-$Version.zip",
-            "https://download.oracle.com/otn_software/nt/instantclient/2390000/instantclient-basic-windows.x64-$Version.zip"
+            "https://download.oracle.com/otn_software/nt/instantclient/instantclient-odbc-windows.zip",
+            "https://download.oracle.com/otn_software/nt/instantclient/instantclient-jdbc-windows.zip",
+            "https://download.oracle.com/otn_software/nt/instantclient/instantclient-tools-windows.zip",
+            "https://download.oracle.com/otn_software/nt/instantclient/instantclient-sqlplus-windows.zip",
+            "https://download.oracle.com/otn_software/nt/instantclient/instantclient-basic-windows.zip"
         )
         
         # Create target directory
@@ -412,8 +409,7 @@ function Extract-Addon {
         switch -Wildcard ($AddonName) {
             "InstantClient" {
                 Write-Progress "EXTRACTION" "Special InstantClient processing"
-                # For InstantClient DownloadUrl contains version
-                return (Process-InstantClient -Version $DownloadUrl -DestDir $DestDir)
+                return (Process-InstantClient -DestDir $DestDir)
             }
             
             "ImageMagick-*" {
@@ -1468,6 +1464,156 @@ function Copy-PhpMibFiles {
     Write-Success "PHP MIB files copy operation completed"
 }
 
+function Copy-PhpBlackfireFiles {
+    <#
+    .SYNOPSIS
+    Downloads and copies Blackfire extension files to PHP modules
+    #>
+    
+    Write-Banner "COPYING PHP BLACKFIRE FILES" "Magenta"
+    Write-Host ""
+    
+    # Define Blackfire archives for different PHP versions
+    $blackfireArchives = @{
+        "7.2" = "https://blackfire.io/api/v1/releases/probe/php/windows/amd64/72"
+        "7.3" = "https://blackfire.io/api/v1/releases/probe/php/windows/amd64/73"
+        "7.4" = "https://blackfire.io/api/v1/releases/probe/php/windows/amd64/74"
+        "8.0" = "https://blackfire.io/api/v1/releases/probe/php/windows/amd64/80"
+        "8.1" = "https://blackfire.io/api/v1/releases/probe/php/windows/amd64/81"
+        "8.2" = "https://blackfire.io/api/v1/releases/probe/php/windows/amd64/82"
+        "8.3" = "https://blackfire.io/api/v1/releases/probe/php/windows/amd64/83"
+        "8.4" = "https://blackfire.io/api/v1/releases/probe/php/windows/amd64/84"
+    }
+    
+    $processedVersions = 0
+    $skippedVersions = 0
+    $failedVersions = 0
+    
+    foreach ($version in $blackfireArchives.Keys) {
+        $phpModuleDir = "..\modules\PHP-$version"
+        $extDir = Join-Path $phpModuleDir "ext"
+        $targetFile = Join-Path $extDir "php_blackfire.dll"
+        
+        Write-Host ""
+        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host " PHP-$version BLACKFIRE EXTENSION" -ForegroundColor Cyan
+        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host ""
+        
+        # Check if PHP module exists
+        if (-not (Test-Path $phpModuleDir)) {
+            Write-Skip "PHP module directory not found: $phpModuleDir"
+            $skippedVersions++
+            continue
+        }
+        
+        $archiveUrl = $blackfireArchives[$version]
+        
+        try {
+            Write-Progress "BLACKFIRE-PHP-$version" "Processing Blackfire extension for PHP $version"
+            
+            # Create temporary directory
+            $tmpDir = "$env:TEMP\blackfire_$(Get-Random)"
+            $zipPath = "$tmpDir.zip"
+            
+            Write-Progress "BLACKFIRE-PHP-$version" "Downloading archive" $archiveUrl
+            
+            # Download archive
+            if ($UseProxy) {
+                & curl --socks5 $ProxyUrl -f -s -L -o $zipPath $archiveUrl 2>$null
+            } else {
+                & curl -f -s -L -o $zipPath $archiveUrl 2>$null
+            }
+            
+            if (-not (Test-Path $zipPath)) {
+                Write-Error "Failed to download Blackfire archive for PHP $version"
+                $failedVersions++
+                continue
+            }
+            
+            $fileSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+            Write-Success "Archive downloaded successfully ($fileSize MB)"
+            
+            # Extract archive
+            Write-Progress "BLACKFIRE-PHP-$version" "Extracting archive to temporary directory"
+            Expand-Archive -Path $zipPath -DestinationPath $tmpDir -Force
+            
+            # Find blackfire_php.dll file in extracted content
+            $blackfireFile = Get-ChildItem -Path $tmpDir -File -Recurse | 
+                            Where-Object { $_.Name -eq "blackfire_php.dll" } | 
+                            Select-Object -First 1
+            
+            if (-not $blackfireFile) {
+                Write-Warning "blackfire_php.dll file not found in archive for PHP $version"
+                Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+                $failedVersions++
+                continue
+            }
+            
+            Write-Progress "BLACKFIRE-PHP-$version" "Found Blackfire DLL: $($blackfireFile.FullName)"
+            
+            # Create ext directory if it doesn't exist
+            if (-not (Test-Path $extDir)) {
+                New-Item -ItemType Directory -Path $extDir -Force | Out-Null
+                Write-Success "Created ext directory: $extDir"
+            }
+            
+            # Remove existing file if it exists (for clean overwrite)
+            if (Test-Path $targetFile) {
+                Remove-Item $targetFile -Force
+                Write-Success "Removed existing Blackfire extension for clean overwrite"
+            }
+            
+            # Copy blackfire_php.dll to PHP module ext directory as php_blackfire.dll
+            Write-Progress "BLACKFIRE-PHP-$version" "Copying Blackfire extension to PHP module"
+            Copy-Item -Path $blackfireFile.FullName -Destination $targetFile -Force
+            
+            # Verify file was copied
+            if (Test-Path $targetFile) {
+                $copiedFileSize = [math]::Round((Get-Item $targetFile).Length / 1KB, 2)
+                Write-Success "Copied php_blackfire.dll to $targetFile ($copiedFileSize KB)"
+            } else {
+                Write-Warning "Failed to copy Blackfire extension for PHP $version"
+                $failedVersions++
+                continue
+            }
+            
+            # Clean up temporary files
+            Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Success "Temporary files cleaned up"
+            
+            $processedVersions++
+            Write-Success "Blackfire extension successfully processed for PHP $version"
+        }
+        catch {
+            Write-Error "Critical error processing Blackfire extension for PHP $version : $_"
+            # Clean up on error
+            Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+            $failedVersions++
+        }
+    }
+    
+    # Show summary
+    Write-Host ""
+    Write-Host "📊 PHP Blackfire processing results:" -ForegroundColor White
+    Write-Host ""
+    Write-Host "   Total PHP versions:  " -NoNewline -ForegroundColor Gray
+    Write-Host $blackfireArchives.Count -ForegroundColor White
+    Write-Host "   Processed:           " -NoNewline -ForegroundColor Gray
+    Write-Host $processedVersions -ForegroundColor Green
+    Write-Host "   Skipped:             " -NoNewline -ForegroundColor Gray
+    Write-Host $skippedVersions -ForegroundColor Yellow
+    Write-Host "   Errors:              " -NoNewline -ForegroundColor Gray
+    Write-Host $failedVersions -ForegroundColor Red
+    Write-Host ""
+    
+    $successRate = if ($blackfireArchives.Count -gt 0) { [math]::Round(($processedVersions / $blackfireArchives.Count) * 100, 1) } else { 0 }
+    Write-Host "   Success rate:        " -NoNewline -ForegroundColor Gray
+    Write-Host "$successRate%" -ForegroundColor $(if ($successRate -ge 90) { "Green" } elseif ($successRate -ge 70) { "Yellow" } else { "Red" })
+    
+    Write-Success "PHP Blackfire files copy operation completed"
+}
+
 function Copy-AdditionalFiles {
     <#
     .SYNOPSIS
@@ -1778,6 +1924,11 @@ Write-Host ""
 
 # Copy PHP MIB files
 Copy-PhpMibFiles
+
+Write-Host ""
+
+# Copy PHP Blackfire files
+Copy-PhpBlackfireFiles
 
 Write-Host ""
 
