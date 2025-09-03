@@ -1373,8 +1373,12 @@ function Copy-AdditionalFiles {
     
     # Copy local file with overwrite
     $localCopies = @{
-        "..\..\OSPSource\Win64\Release\OpenServerPanel.exe" = "..\bin\ospanel.exe"
-        "..\resources\dist\README.txt" = "..\user\geo\README.txt"
+        "..\..\OSPSource\Win64\Release\OpenServerPanel.exe" = "..\bin\ospanel.exe",
+        "..\resources\dist\README.txt" = "..\user\geo\README.txt",
+        "..\bin\bat.exe" = "..\system\bin\bat.exe",
+        "..\bin\curl.exe" = "..\system\bin\curl.exe",
+        "..\bin\libcurl-x64.dll" = "..\system\bin\libcurl-x64.dll",
+        "..\bin\fd.exe" = "..\system\bin\fd.exe"
     }
     
     foreach ($sourcePath in $localCopies.Keys) {
