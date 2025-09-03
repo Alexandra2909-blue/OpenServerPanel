@@ -11,7 +11,7 @@
 @set "OSP_MODULES_LIST_=:%OSP_MODULES_LIST: =:%:"
 @set "OSP_ADDONS_LIST={addons_list}"
 @set "OSP_ADDONS_LIST_=:%OSP_ADDONS_LIST: =:%:"
-@set "OSP_PROG_LIST=curl ospurl tail fd bat getbit getparent ansicon colortest ospanel_sys_prep_tool"
+@set "OSP_PROG_LIST=curl ospurl tail fd bat getbit getparent ansicon colortest"
 
 :: Checking and configuring ANSI for terminal
 
@@ -81,9 +81,14 @@
 
 for %%a in (%OSP_PROG_LIST%) do (
     if not exist "%OSP_DIR%\system\bin\%%a.exe" (
-        set "OSP_ERR_MSG=%%a.exe {lang_err_not_found}"
+        set "OSP_ERR_MSG=%OSP_DIR%\system\bin\%%a.exe {lang_err_not_found}"
         goto error
     )
+)
+
+if not exist "%OSP_DIR%\bin\ospanel_sys_prep_tool.exe" (
+    set "OSP_ERR_MSG=%OSP_DIR%\bin\ospanel_sys_prep_tool.exe {lang_err_not_found}"
+    goto error
 )
 
 :: Initialization and verification of environment
@@ -575,13 +580,13 @@ if /i not "%2"=="silent" if /i not "%2"=="ssd" if not "%2"=="" goto invalid
 :: Running with appropriate parameters
 
 if /i "%2"=="silent" (
-    start "" /WAIT "%OSP_DIR%\system\bin\ospanel_sys_prep_tool.exe" /VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL
+    start "" /WAIT "%OSP_DIR%\bin\ospanel_sys_prep_tool.exe" /VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL
 )
 if /i "%2"=="ssd" (
-    start "" /WAIT "%OSP_DIR%\system\bin\ospanel_sys_prep_tool.exe" /VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /MERGETASKS="task_SSD"
+    start "" /WAIT "%OSP_DIR%\bin\ospanel_sys_prep_tool.exe" /VERYSILENT /SUPPRESSMSGBOXES /NOCANCEL /MERGETASKS="task_SSD"
 )
 if "%2"=="" (
-    start "" "%OSP_DIR%\system\bin\ospanel_sys_prep_tool.exe"
+    start "" "%OSP_DIR%\bin\ospanel_sys_prep_tool.exe"
 )
 
 goto end
