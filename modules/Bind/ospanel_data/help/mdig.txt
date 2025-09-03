@@ -1,0 +1,4 @@
+Usage: mdig @server {global-opt} host
+           {local-opt} [ host {local-opt} [...]]
+
+Use "mdig -h" (or "mdig -h | more") for complete list of options
