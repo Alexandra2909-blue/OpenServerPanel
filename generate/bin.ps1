@@ -1260,39 +1260,62 @@ function Copy-ComposerFiles {
     
     Write-Success "All Composer files verified"
     
+    # Define files that go to composer subfolder vs PHP root
+    $composerSubfolderFiles = @("composer.phar", "config.json", "composer.json", "auth.json", "keys.tags.pub", "keys.dev.pub")
+    $phpRootFiles = @("browscap.ini", "composer.bat", "phpinfo.php")
+    
     # Copy files to PHP modules with forced overwrite
     $phpVersions = @("7.2", "7.3", "7.4", "8.0", "8.1", "8.2", "8.3", "8.4")
     
     foreach ($version in $phpVersions) {
-        $targetDir = "..\modules\PHP-$version\ospanel_data\default_data\composer"
+        $phpModuleDir = "..\modules\PHP-$version"
+        $composerTargetDir = "$phpModuleDir\ospanel_data\default_data\composer"
         
-        if (Test-Path $targetDir) {
+        if (Test-Path $phpModuleDir) {
             Write-Progress "COMPOSER" "Copying files to PHP $version"
             
-            # Remove old files in target directory
-            foreach ($file in $sources.Keys) {
-                $targetFile = Join-Path $targetDir $file
-                if (Test-Path $targetFile) {
-                    Remove-Item $targetFile -Force -ErrorAction SilentlyContinue
+            # Copy files to composer subfolder
+            if (Test-Path $composerTargetDir) {
+                foreach ($file in $composerSubfolderFiles) {
+                    $sourcePath = $sources[$file]
+                    $targetPath = Join-Path $composerTargetDir $file
+                    
+                    # Remove old file in target directory
+                    if (Test-Path $targetPath) {
+                        Remove-Item $targetPath -Force -ErrorAction SilentlyContinue
+                    }
+                    
+                    try {
+                        Copy-Item $sourcePath $targetPath -Force
+                        Write-Success "Copied $file to PHP $version composer folder"
+                    }
+                    catch {
+                        Write-Warning "Error copying $file to PHP $version composer folder: $_"
+                    }
                 }
             }
             
-            # Copy new files
-            foreach ($file in $sources.Keys) {
+            # Copy files to PHP module root
+            foreach ($file in $phpRootFiles) {
                 $sourcePath = $sources[$file]
-                $targetPath = Join-Path $targetDir $file
+                $targetPath = Join-Path $phpModuleDir $file
+                
+                # Remove old file in target directory
+                if (Test-Path $targetPath) {
+                    Remove-Item $targetPath -Force -ErrorAction SilentlyContinue
+                }
                 
                 try {
                     Copy-Item $sourcePath $targetPath -Force
-                    Write-Success "Copied $file to PHP $version"
+                    Write-Success "Copied $file to PHP $version root"
                 }
                 catch {
-                    Write-Warning "Error copying $file to PHP $version : $_"
+                    Write-Warning "Error copying $file to PHP $version root: $_"
                 }
             }
         }
         else {
-            Write-Warning "Target directory not found: $targetDir"
+            Write-Warning "PHP module directory not found: $phpModuleDir"
         }
     }
     
