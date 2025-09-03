@@ -1325,7 +1325,6 @@ function Copy-PhpMibFiles {
     #>
     
     Write-Banner "COPYING PHP MIB FILES" "Magenta"
-    Write-Host ""
     
     # Define MIB archives for different PHP versions
     $mibArchives = @{
@@ -1612,6 +1611,196 @@ function Copy-PhpBlackfireFiles {
     Write-Host "$successRate%" -ForegroundColor $(if ($successRate -ge 90) { "Green" } elseif ($successRate -ge 70) { "Yellow" } else { "Red" })
     
     Write-Success "PHP Blackfire files copy operation completed"
+}
+
+function Copy-PhpIoncubeFiles {
+    <#
+    .SYNOPSIS
+    Downloads and copies Ioncube loader files to PHP modules
+    #>
+    
+    Write-Banner "COPYING PHP IONCUBE FILES" "Magenta"
+    Write-Host ""
+    
+    # Define Ioncube archives for different PHP versions
+    $ioncubeArchives = @{
+        "7.2" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc15_x86-64.zip"
+        "7.3" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc15_x86-64.zip"
+        "7.4" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc15_x86-64.zip"
+        "8.0" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc16_x86-64.zip"
+        "8.1" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc16_x86-64.zip"
+        "8.2" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc16_x86-64.zip"
+        "8.3" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc16_x86-64.zip"
+        "8.4" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc17_x86-64.zip"
+    }
+    
+    $processedVersions = 0
+    $skippedVersions = 0
+    $failedVersions = 0
+    
+    foreach ($version in $ioncubeArchives.Keys) {
+        $phpModuleDir = "..\modules\PHP-$version"
+        $extDir = Join-Path $phpModuleDir "ext"
+        $ioncubeDir = Join-Path $phpModuleDir "3rd-party\ioncube"
+        $targetLoaderFile = Join-Path $extDir "php_ioncube.dll"
+        
+        Write-Host ""
+        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host " PHP-$version IONCUBE LOADER" -ForegroundColor Cyan
+        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host ""
+        
+        # Check if PHP module exists
+        if (-not (Test-Path $phpModuleDir)) {
+            Write-Skip "PHP module directory not found: $phpModuleDir"
+            $skippedVersions++
+            continue
+        }
+        
+        $archiveUrl = $ioncubeArchives[$version]
+        
+        try {
+            Write-Progress "IONCUBE-PHP-$version" "Processing Ioncube loader for PHP $version"
+            
+            # Create temporary directory
+            $tmpDir = "$env:TEMP\ioncube_$(Get-Random)"
+            $zipPath = "$tmpDir.zip"
+            
+            Write-Progress "IONCUBE-PHP-$version" "Downloading archive" $archiveUrl
+            
+            # Download archive
+            if ($UseProxy) {
+                & curl --socks5 $ProxyUrl -f -s -L -o $zipPath $archiveUrl 2>$null
+            } else {
+                & curl -f -s -L -o $zipPath $archiveUrl 2>$null
+            }
+            
+            if (-not (Test-Path $zipPath)) {
+                Write-Error "Failed to download Ioncube archive for PHP $version"
+                $failedVersions++
+                continue
+            }
+            
+            $fileSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+            Write-Success "Archive downloaded successfully ($fileSize MB)"
+            
+            # Extract archive
+            Write-Progress "IONCUBE-PHP-$version" "Extracting archive to temporary directory"
+            Expand-Archive -Path $zipPath -DestinationPath $tmpDir -Force
+            
+            # Find specific loader file for this PHP version
+            $loaderFileName = "ioncube_loader_win_$($version -replace '\.', '').dll"
+            $loaderFile = Get-ChildItem -Path $tmpDir -File -Recurse | 
+                         Where-Object { $_.Name -eq $loaderFileName } | 
+                         Select-Object -First 1
+            
+            if (-not $loaderFile) {
+                Write-Warning "Ioncube loader file not found in archive for PHP $version (looking for: $loaderFileName)"
+                Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+                $failedVersions++
+                continue
+            }
+            
+            Write-Progress "IONCUBE-PHP-$version" "Found Ioncube loader: $($loaderFile.FullName)"
+            
+            # Create ext directory if it doesn't exist
+            if (-not (Test-Path $extDir)) {
+                New-Item -ItemType Directory -Path $extDir -Force | Out-Null
+                Write-Success "Created ext directory: $extDir"
+            }
+            
+            # Remove existing loader file if it exists (for clean overwrite)
+            if (Test-Path $targetLoaderFile) {
+                Remove-Item $targetLoaderFile -Force
+                Write-Success "Removed existing Ioncube loader for clean overwrite"
+            }
+            
+            # Copy loader file to PHP module ext directory as php_ioncube.dll
+            Write-Progress "IONCUBE-PHP-$version" "Copying Ioncube loader to PHP module ext directory"
+            Copy-Item -Path $loaderFile.FullName -Destination $targetLoaderFile -Force
+            
+            # Verify loader file was copied
+            if (Test-Path $targetLoaderFile) {
+                $copiedFileSize = [math]::Round((Get-Item $targetLoaderFile).Length / 1KB, 2)
+                Write-Success "Copied php_ioncube.dll to $targetLoaderFile ($copiedFileSize KB)"
+            } else {
+                Write-Warning "Failed to copy Ioncube loader for PHP $version"
+                $failedVersions++
+                continue
+            }
+            
+            # Create 3rd-party/ioncube directory if it doesn't exist
+            if (-not (Test-Path $ioncubeDir)) {
+                New-Item -ItemType Directory -Path $ioncubeDir -Force | Out-Null
+                Write-Success "Created 3rd-party/ioncube directory: $ioncubeDir"
+            }
+            
+            # Remove existing files in 3rd-party/ioncube directory for clean overwrite
+            if (Test-Path $ioncubeDir) {
+                Get-ChildItem -Path $ioncubeDir | Remove-Item -Recurse -Force
+                Write-Success "Cleaned existing files in 3rd-party/ioncube directory"
+            }
+            
+            # Move remaining files to 3rd-party/ioncube directory
+            Write-Progress "IONCUBE-PHP-$version" "Moving remaining files to 3rd-party/ioncube directory"
+            $remainingFiles = Get-ChildItem -Path $tmpDir -Recurse -File | Where-Object { $_.FullName -ne $loaderFile.FullName }
+            $movedFilesCount = 0
+            
+            foreach ($file in $remainingFiles) {
+                try {
+                    $relativePath = $file.FullName.Substring($tmpDir.Length + 1)
+                    $targetPath = Join-Path $ioncubeDir $relativePath
+                    
+                    # Create subdirectory if needed
+                    $targetDir = Split-Path $targetPath -Parent
+                    if (-not (Test-Path $targetDir)) {
+                        New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+                    }
+                    
+                    Move-Item -Path $file.FullName -Destination $targetPath -Force
+                    $movedFilesCount++
+                }
+                catch {
+                    Write-Warning "Error moving file $($file.Name): $_"
+                }
+            }
+            
+            Write-Success "Moved $movedFilesCount additional files to 3rd-party/ioncube directory"
+            
+            # Clean up temporary files
+            Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Success "Temporary files cleaned up"
+            
+            $processedVersions++
+            Write-Success "Ioncube loader successfully processed for PHP $version"
+        }
+        catch {
+            Write-Error "Critical error processing Ioncube loader for PHP $version : $_"
+            # Clean up on error
+            Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+            $failedVersions++
+        }
+    }
+    
+    # Show summary
+    Write-Host ""
+    Write-Host "📊 PHP Ioncube processing results:" -ForegroundColor White
+    Write-Host ""
+    Write-Host "   Total PHP versions:  " -NoNewline -ForegroundColor Gray
+    Write-Host $ioncubeArchives.Count -ForegroundColor White
+    Write-Host "   Processed:           " -NoNewline -ForegroundColor Gray
+    Write-Host $processedVersions -ForegroundColor Green
+    Write-Host "   Skipped:             " -NoNewline -ForegroundColor Gray
+    Write-Host $skippedVersions -ForegroundColor Yellow
+    Write-Host "   Errors:              " -NoNewline -ForegroundColor Gray
+    Write-Host $failedVersions -ForegroundColor Red
+    Write-Host ""
+    
+    $successRate = if ($ioncubeArchives.Count -gt 0) { [math]::Round(($processedVersions / $ioncubeArchives.Count) * 100, 1) } else { 0 }
+    Write-Host "   Success rate:        " -NoNewline -ForegroundColor Gray
+    Write-Host "$successRate%" -ForegroundColor $(if ($successRate -ge 90) { "Green" } elseif ($successRate -ge 70) { "Yellow" } else { "Red" })
+    
+    Write-Success "PHP Ioncube files copy operation completed"
 }
 
 function Copy-AdditionalFiles {
@@ -1929,6 +2118,11 @@ Write-Host ""
 
 # Copy PHP Blackfire files
 Copy-PhpBlackfireFiles
+
+Write-Host ""
+
+# Copy PHP Ioncube files
+Copy-PhpIoncubeFiles
 
 Write-Host ""
 
