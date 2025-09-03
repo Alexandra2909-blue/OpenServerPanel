@@ -1159,6 +1159,226 @@ function Generate-ToolHelp {
     }
 }
 
+function Ensure-Directory {
+    <#
+    .SYNOPSIS
+    Creates directory if it doesn't exist, ensuring parent directories are created
+    
+    .PARAMETER FilePath
+    Path to file (directory will be created for this file)
+    #>
+    param([string]$FilePath)
+    
+    $directory = Split-Path -Path $FilePath -Parent
+    if ($directory -and -not (Test-Path $directory)) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+}
+
+function Copy-ComposerFiles {
+    <#
+    .SYNOPSIS
+    Downloads and copies Composer files and keys to PHP modules
+    #>
+    
+    Write-Banner "COPYING COMPOSER FILES" "Magenta"
+    Write-Host ""
+    
+    Write-Progress "COMPOSER" "Downloading Composer and keys"
+    
+    # Define source files
+    $sources = @{
+        "composer.phar" = "..\resources\composer\composer.phar"
+        "config.json" = "..\resources\composer\config.json"
+        "composer.json" = "..\resources\composer\composer.json"
+        "auth.json" = "..\resources\composer\auth.json"
+        "keys.tags.pub" = "..\resources\composer\keys.tags.pub"
+        "keys.dev.pub" = "..\resources\composer\keys.dev.pub"
+        "browscap.ini" = "..\resources\composer\browscap.ini"
+        "composer.bat" = "..\resources\composer\composer.bat"
+        "phpinfo.php" = "..\resources\composer\phpinfo.php"
+    }
+    
+    # Create source directory if it doesn't exist
+    $sourceDir = "..\resources\composer"
+    if (-not (Test-Path $sourceDir)) {
+        New-Item -ItemType Directory -Path $sourceDir -Force | Out-Null
+    }
+    
+    # Remove old files before downloading/updating
+    $filesToDownload = @("composer.phar", "keys.tags.pub", "keys.dev.pub", "browscap.ini")
+    foreach ($file in $filesToDownload) {
+        $filePath = $sources[$file]
+        if (Test-Path $filePath) {
+            Remove-Item $filePath -Force -ErrorAction SilentlyContinue
+            Write-Success "Removed old file: $file"
+        }
+    }
+    
+    # Download files (always overwrite)
+    $downloads = @{
+        "https://composer.github.io/snapshots.pub" = $sources["keys.dev.pub"]
+        "https://composer.github.io/releases.pub" = $sources["keys.tags.pub"]
+        "https://getcomposer.org/download/latest-stable/composer.phar" = $sources["composer.phar"]
+        "https://browscap.org/stream?q=Lite_PHP_BrowsCapINI" = $sources["browscap.ini"]
+    }
+    
+    foreach ($url in $downloads.Keys) {
+        $destPath = $downloads[$url]
+        Write-Progress "COMPOSER" "Downloading $(Split-Path $destPath -Leaf)" $url
+        
+        try {
+            if ($UseProxy) {
+                & curl --socks5 $ProxyUrl -f -s -L -o $destPath $url 2>$null
+            } else {
+                & curl -f -s -L -o $destPath $url 2>$null
+            }
+            
+            if (Test-Path $destPath) {
+                Write-Success "Downloaded: $(Split-Path $destPath -Leaf)"
+            } else {
+                Write-Warning "Failed to download: $(Split-Path $destPath -Leaf)"
+            }
+        }
+        catch {
+            Write-Warning "Error downloading $(Split-Path $destPath -Leaf): $_"
+        }
+    }
+    
+    # Check for all required files
+    $missingFiles = @()
+    foreach ($file in $sources.Keys) {
+        if (-not (Test-Path $sources[$file])) {
+            $missingFiles += $file
+        }
+    }
+    
+    if ($missingFiles.Count -gt 0) {
+        Write-Error "Missing files: $($missingFiles -join ', ')"
+        return $false
+    }
+    
+    Write-Success "All Composer files verified"
+    
+    # Copy files to PHP modules with forced overwrite
+    $phpVersions = @("7.2", "7.3", "7.4", "8.0", "8.1", "8.2", "8.3", "8.4")
+    
+    foreach ($version in $phpVersions) {
+        $targetDir = "..\modules\PHP-$version\ospanel_data\default_data\composer"
+        
+        if (Test-Path $targetDir) {
+            Write-Progress "COMPOSER" "Copying files to PHP $version"
+            
+            # Remove old files in target directory
+            foreach ($file in $sources.Keys) {
+                $targetFile = Join-Path $targetDir $file
+                if (Test-Path $targetFile) {
+                    Remove-Item $targetFile -Force -ErrorAction SilentlyContinue
+                }
+            }
+            
+            # Copy new files
+            foreach ($file in $sources.Keys) {
+                $sourcePath = $sources[$file]
+                $targetPath = Join-Path $targetDir $file
+                
+                try {
+                    Copy-Item $sourcePath $targetPath -Force
+                    Write-Success "Copied $file to PHP $version"
+                }
+                catch {
+                    Write-Warning "Error copying $file to PHP $version : $_"
+                }
+            }
+        }
+        else {
+            Write-Warning "Target directory not found: $targetDir"
+        }
+    }
+    
+    Write-Success "Composer files copy operation completed"
+    return $true
+}
+
+function Copy-AdditionalFiles {
+    <#
+    .SYNOPSIS
+    Downloads and copies additional system files
+    #>
+    
+    Write-Banner "COPYING ADDITIONAL FILES" "Magenta"
+    Write-Host ""
+    
+    # Download files with guaranteed overwrite
+    $downloads = @{
+        "https://curl.se/ca/cacert.pem" = @(
+            "..\system\ssl\cacert.pem",
+            "..\bin\curl-ca-bundle.crt",
+            "..\addons\Perl\perl\vendor\lib\Mozilla\CA\cacert.pem"
+        )
+    }
+    
+    foreach ($url in $downloads.Keys) {
+        foreach ($destPath in $downloads[$url]) {
+            Write-Progress "ADDITIONAL" "Downloading $(Split-Path $destPath -Leaf)" $url
+            
+            # Ensure directory exists
+            Ensure-Directory $destPath
+            
+            # Remove existing file
+            if (Test-Path $destPath) {
+                Remove-Item $destPath -Force
+            }
+            
+            try {
+                if ($UseProxy) {
+                    & curl --socks5 $ProxyUrl -f -s -L -o $destPath $url 2>$null
+                } else {
+                    & curl -f -s -L -o $destPath $url 2>$null
+                }
+                
+                if (Test-Path $destPath) {
+                    Write-Success "Downloaded: $destPath"
+                } else {
+                    Write-Warning "Failed to download: $destPath"
+                }
+            }
+            catch {
+                Write-Warning "Error downloading to $destPath : $_"
+            }
+        }
+    }
+    
+    # Copy local file with overwrite
+    $localCopies = @{
+        "..\..\OSPSource\Win64\Release\OpenServerPanel.exe" = "..\bin\ospanel.exe"
+    }
+    
+    foreach ($sourcePath in $localCopies.Keys) {
+        $destPath = $localCopies[$sourcePath]
+        
+        if (Test-Path $sourcePath) {
+            Write-Progress "ADDITIONAL" "Copying local file $(Split-Path $sourcePath -Leaf)"
+            
+            # Ensure directory exists
+            Ensure-Directory $destPath
+            
+            try {
+                Copy-Item $sourcePath $destPath -Force
+                Write-Success "Copied: $sourcePath → $destPath"
+            }
+            catch {
+                Write-Warning "Error copying $sourcePath to $destPath : $_"
+            }
+        }
+        else {
+            Write-Warning "Source file not found: $sourcePath"
+        }
+    }
+    
+    Write-Success "Additional files copy operation completed"
+}
+
 function Show-Summary {
     <#
     .SYNOPSIS
@@ -1207,6 +1427,15 @@ function Show-Summary {
 # ================== MAIN EXECUTION BLOCK ==================
 Write-Banner "AUTOMATED OSPANEL ADDONS AND UTILITIES BUILD" "Cyan"
 Write-Host ""
+
+$folders = @("..\addons", "..\bin", "..\config", "..\data")
+foreach ($folder in $folders) {
+    if (-not (Test-Path $folder)) {
+        New-Item -ItemType Directory -Path $folder -Force | Out-Null
+        Write-Host "📂 Created directory: $folder" -ForegroundColor Green
+    }
+}
+
 # Check prerequisites
 if (-not (Test-Prerequisites)) {
     exit 1
@@ -1364,6 +1593,18 @@ foreach ($tool in $binMatrix.tools) {
         $script:FailedTools++
     }
 }
+
+# ==================== ADDITIONAL FILES PROCESSING ====================
+
+Write-Host ""
+
+# Copy Composer files
+Copy-ComposerFiles
+
+Write-Host ""
+
+# Copy additional files
+Copy-AdditionalFiles
 
 # Show final statistics
 Write-Host ""
