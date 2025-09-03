@@ -1,3 +1,15 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5f91278dd05c6ccc5b64d99233bcc6b4bb46b3e69457a1b67c4d1e05828ad072
-size 583
+<?php
+require("config.inc.php");
+try {
+	$o = new OAuth(OAUTH_CONSUMER_KEY,OAUTH_CONSUMER_SECRET,OAUTH_SIG_METHOD_HMACSHA1,OAUTH_AUTH_TYPE_URI);
+	$arrayResp = $o->getRequestToken("https://api.login.yahoo.com/oauth/v2/get_request_token");
+	file_put_contents(OAUTH_TMP_DIR . "/request_token_resp",serialize($arrayResp));
+	$authorizeUrl = $arrayResp["xoauth_request_auth_url"];
+	if(PHP_SAPI=="cli") {
+		echo "Navigate your http client to: {$authorizeUrl}\n";
+	} else {
+		header("Location: {$authorizeUrl}");
+	}
+} catch(OAuthException $E) {
+	echo "Response: ". $E->lastResponse . "\n";
+}

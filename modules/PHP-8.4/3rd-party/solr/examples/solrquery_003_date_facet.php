@@ -1,3 +1,37 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:eb178f49fb0d59326bc1c81822d3f3c49011dae88ecf8330dd5e773386553bf8
-size 775
+<?php
+
+include "bootstrap.php";
+
+$options = array(
+    'hostname' => SOLR_SERVER_HOSTNAME,
+    'login'    => SOLR_SERVER_USERNAME,
+    'password' => SOLR_SERVER_PASSWORD,
+    'port'     => SOLR_SERVER_PORT,
+    'path'     => SOLR_SERVER_PATH,
+);
+
+$client = new SolrClient($options);
+
+$query = new SolrQuery('*:*');
+
+$query->setFacet(true);
+
+$query->addFacetDateField('manufacturedate_dt');
+
+$query->setFacetDateStart('2006-02-13T00:00:00Z');
+
+$query->setFacetDateEnd('2012-02-13T00:00:00Z');
+
+$query->setFacetDateGap('+1YEAR');
+
+$query->setFacetDateHardEnd(1);
+
+$query->addFacetDateOther('before');
+
+$updateResponse = $client->query($query);
+
+$response_array = $updateResponse->getResponse();
+
+$facet_data = $response_array->facet_counts->facet_dates;
+
+print_r($facet_data);

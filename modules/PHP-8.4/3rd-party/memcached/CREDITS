@@ -1,3 +1,2 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:81950bc0144bde7eebf31ea42080eb911f00e5133ee8220eca7cf117041841c4
-size 61
+memcached
+Andrei Zmievski, Oleg Grenrus (igbinary support)

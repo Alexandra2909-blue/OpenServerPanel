@@ -1,3 +1,26 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5d1f5823cd1da5c06e00c8105670678a05b6d065837fafd70a9024bec49a46c5
-size 525
+version: "3.7"
+
+services:
+
+  nginx:
+    container_name: uploadprogress-web
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - "$PWD/nginx.conf:/etc/nginx/conf.d/default.conf"
+      - ".:/var/www/html"
+    depends_on:
+      - php-fpm
+
+  php-fpm:
+    container_name: uploadprogress-php-fpm
+    image: uploadprogress-example-php-fpm
+    build:
+      context: ./.docker
+      args:
+        php_version: 8.0
+        uploadprogress_version: 2.0.2
+    volumes:
+      - "./.tmp:/tmp"
+      - ".:/var/www/html"

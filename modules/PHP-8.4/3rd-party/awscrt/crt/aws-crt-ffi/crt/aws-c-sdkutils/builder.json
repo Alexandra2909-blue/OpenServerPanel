@@ -1,3 +1,12 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:095ebdb65f263f7b4016408015b40b3064a611b843cf70c4a0341eba3c95ca7a
-size 195
+{
+    "name": "aws-c-sdkutils",
+    "upstream": [
+        { "name": "aws-c-common" }
+    ],
+    "downstream": [
+        { "name": "aws-c-auth" }
+    ],
+    "test_steps": [
+        "test"
+    ]
+}

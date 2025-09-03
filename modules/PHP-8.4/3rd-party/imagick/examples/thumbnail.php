@@ -1,3 +1,22 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:8b88c82efbbab4885672220c56c904dad7f044567204c802886ed4da71a7d7a1
-size 430
+<?php
+ 
+/*
+	A simple example demonstrate thumbnail creation.
+*/ 
+ 
+/* Create the Imagick object */
+$im = new Imagick();
+ 
+/* Read the image file */
+$im->readImage( '/tmp/test.png' );
+ 
+/* Thumbnail the image ( width 100, preserve dimensions ) */
+$im->thumbnailImage( 100, null );
+ 
+/* Write the thumbail to disk */
+$im->writeImage( '/tmp/th_test.png' );
+ 
+/* Free resources associated to the Imagick object */
+$im->destroy();
+ 
+?>

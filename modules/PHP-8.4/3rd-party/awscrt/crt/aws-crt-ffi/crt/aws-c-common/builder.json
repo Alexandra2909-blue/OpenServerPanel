@@ -1,3 +1,23 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9b18497e8b8a068c0a995f06de982249a256f129d932aa006bee576900a44149
-size 562
+{
+    "name": "aws-c-common",
+    "upstream": [],
+    "downstream": [
+        { "name": "aws-checksums" },
+        { "name": "aws-c-cal" },
+        { "name": "aws-c-io" },
+        { "name": "aws-c-event-stream" },
+        { "name": "aws-c-compression" },
+        { "name": "aws-c-sdkutils" },
+        { "name": "aws-c-mqtt" },
+        { "name": "aws-c-http" },
+        { "name": "aws-c-auth" }
+    ],
+    "targets": {
+        "windows": {
+            "+build_steps": [
+                "build",
+                ["dir", "/s", "/b"]
+            ]
+        }
+    }
+}

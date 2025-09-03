@@ -1,3 +1,14 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:3ffd1e52c5784394c72d03af2158ce8d17ced32e010235a5152be3710f3b4cf6
-size 277
+This extension needs to be compiled and enabled in your PHP installation.
+
+Basic instructions:
+
+1) phpize
+2) ./configure
+3) make && make install
+
+For Debian/Ubuntu users:
+
+The following packages need to be installed before running the steps above:
+
+1) php5-dev
+2) libpcre3-dev

@@ -1,3 +1,21 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:02e4f37e9dc3f7e1b85ef261631da4fdebcc2baed6ad5f01ebb4b3274a2c1212
-size 359
+<?php
+
+$ps = ps_new();
+
+if (!ps_open_file($ps, "-")) {
+	print "Cannot open PostScript file\n";
+	exit;
+}
+
+ps_set_info($ps, "Creator", "draw.php");
+ps_set_info($ps, "Author", "Uwe Steinmann");
+ps_set_info($ps, "Title", "Creating document in memory");
+
+ps_begin_page($ps, 596, 842);
+ps_end_page($ps);
+
+ps_close($ps);
+echo ps_get_buffer($ps);
+ps_delete($ps);
+
+?>

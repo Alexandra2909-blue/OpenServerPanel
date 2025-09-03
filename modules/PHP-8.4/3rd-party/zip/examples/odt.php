@@ -1,3 +1,20 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5db34aa0c5096c67a5ab3348cf3bab411b42e2988621f6920b172c7161868ae3
-size 452
+<?php
+/* $Id$ */
+$reader = new XMLReader();
+
+$reader->open('zip://' . dirname(__FILE__) . '/test.odt#meta.xml');
+$odt_meta = array();
+while ($reader->read()) {
+	if ($reader->nodeType == XMLREADER::ELEMENT) {
+		$elm = $reader->name;
+	} else {
+		if ($reader->nodeType == XMLREADER::END_ELEMENT && $reader->name == 'office:meta') {
+			break;
+		}
+		if (!trim($reader->value)) {
+			continue;
+		}
+		$odt_meta[$elm] = $reader->value;
+	}
+}
+print_r($odt_meta);

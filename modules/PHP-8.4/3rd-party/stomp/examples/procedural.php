@@ -1,3 +1,23 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:caec4f5034a7714d15bfd0b7698b9264d387766f58c9f9102563ad1b58ee6cbb
-size 523
+<?php
+
+$broker = 'tcp://localhost:61613';
+$queue  = '/queue/foo';
+$msg    = 'bar';
+
+if($stomp = stomp_connect($broker)) {
+
+    stomp_begin($stomp, 't1');
+    stomp_send($stomp, $queue, $msg, array('transaction' => 't1'));
+    stomp_commit($stomp, 't1');
+
+    stomp_subscribe($stomp, $queue);
+    $frame = stomp_read_frame($stomp);
+    if ($frame['body'] === $msg) {
+        echo "Worked\n";
+        stomp_ack($stomp, $frame['headers']['message-id']);
+    } else {
+        echo "Failed\n";
+    }
+
+    stomp_close($stomp);
+}

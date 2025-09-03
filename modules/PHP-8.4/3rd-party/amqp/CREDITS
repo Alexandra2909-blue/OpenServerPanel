@@ -1,3 +1,20 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:6809a4c595bae5fecdb22dceb2ade107fa1ef7548763419d65fe324474107f92
-size 771
+AMQP bindings for PHP
+All who contributed to php-amqp project
+Alexandre Kalendarev <akalend@mail.ru> (original author)
+Pieter de Zwart <pdezwart@php.net> (lead)
+Andrey Hristov (contributor)
+Brad Rodriguez <brodriguez@php.net> (contributor)
+John Skopis (contributor - PHP < 5.3 compatibility)
+Andy Wick <andy.wick@teamaol.com> (contributor - bug fixes, custom headers support)
+Jonathan Tansavatdi <jtansavatdi@php.net> (contributor)
+Bernhard Weisshuhn (maintainer)
+Lars Strojny (maintainer)
+Anatoliy Belsky (contributor)
+Alex Sladkov (contributor)
+Vladimir Kartaviy (contributor)
+Florin Patan (reported)
+Ilya a.k.a. coodix (contributor)
+Bogdan Padalko (contributor)
+Dmitry Vinogradov (contributor)
+Peter Hansen (contributor)
+Michael K. Squires <sqmk@php.net> (contributor)

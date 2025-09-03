@@ -1,3 +1,228 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:8ce0ceb61c4a739a571c7e0151ac764fa7f4cd9048051c4a1206417b931ef573
-size 12138
+APCu Quick-Start Braindump
+
+This is a rapidly written braindump of how APCu currently works in the
+form of a quick-start guide to start hacking on APCu.
+
+1. Install and use APCu a bit so you know what it does from the end-user's
+   perspective. PHP functions are all explained here: https://www.php.net/apcu
+
+2. Grab the current APCu code from https://github.com/krakjoe/apcu
+
+   Most of the user-visible stuff is implemented in apcu/php_apc.c.
+   It is also a regular PHP extension in the sense that there are MINIT, MINFO,
+   MSHUTDOWN, RSHUTDOWN, etc. functions.
+
+3. Build it.
+
+   cd apcu
+   phpize
+   ./configure --enable-apcu --enable-apcu-debug
+   make
+   make test
+   cp modules/apcu.so /usr/local/lib/php
+   apachectl restart
+
+4. Debugging Hints
+
+   apachectl stop
+   gdb /usr/bin/httpd
+   break ??
+   run -X
+
+   Grab the .gdbinit from the PHP source tree and have a look at the macros.
+
+5. The basics of APCu
+
+   The caching functionality of APCu is provided by a modified version of the APC source code.
+   Many tweaks have been applied. There's probably some of my blood in it, if you look real close... (krakjoe)
+
+   APCu has the following main component parts:
+   1) shared memory allocator / SMA (apc_sma.c)
+   2) user land cache (apc_cache.c)
+   3) persistence representation (apc_persist.c)
+
+5.1 SMA
+
+   The SMA (shared memory allocator) is a pretty standard memory allocator. It provides
+   apc_sma_malloc() and apc_sma_free() which behave just like malloc() and free().
+
+   The SMA is designed such that the SMA can be used by third parties in their own extensions
+   without interfering with or consuming the resources of APCu itself.
+
+   MINIT calls apc_sma_init(), which takes care of mapping and initializing the shared memory segment.
+   It initializes the smaheader (sma_header_t) at the beginning of the shared memory. The smaheader
+   serves as a place to store, among other things, statistical information and the lock for the SMA.
+
+   Immediately after the smaheader it initializes three blocks. The first and last block are 0-sized
+   and simplify the handling of the linked list of free blocks and sequential traversal of blocks.
+   The block between the 0-sized blocks contains the remaining amount of shared memory available
+   for allocation.
+
+   At this point, the shared memory looks like this:
+
+     +-----------+--------+-----------------------------------+
+     | smaheader | 0-size |        free-block        | 0-size |
+     +-----------+--------+-----------------------------------+
+
+   These three blocks (type block_t) form the initial doubly linked list of free blocks.
+   Since the whole SMA is implemented relocatable (independent of the starting address
+   of the shared memory segment), this list is offset-based (so no pointers).
+
+   The macros BLOCKAT and OFFSET are used to simplify the handling of the offset-based blocks:
+
+   - The BLOCKAT macro turns an offset into an actual process-local address/pointer:
+
+     #define BLOCKAT(offset) ((block_t*)((char *)smaheader + offset))
+
+   - The OFFSET macro goes the other way:
+
+     #define OFFSET(block) ((int)(((char*)block) - (char*)smaheader))
+
+   Both macros assume the presence of the variable "smaheader" that points to the beginning
+   of the shared memory segment.
+
+   To allocate a block via apc_sma_malloc(), we walk through the doubly linked list of blocks until we
+   find one that is >= to the requested size (see find_block()). The first call to find_block() will hit
+   the second block. To get a block of the requested size, we then chop up that block so it looks like this:
+
+     +-----------+--------+-------+------------------+--------+
+     | smaheader | 0-size | block |    free-block    | 0-size |
+     +-----------+--------+-------+------------------+--------+
+
+   Then we unlink that block from the doubly linked list so it won't show up
+   as an available block on the next allocation. So we actually have:
+
+     +-----------+--------+       +------------------+--------+
+     | smaheader | 0-size |<----->|    free-block    | 0-size |
+     +-----------+--------+       +------------------+--------+
+
+   And smaheader->avail along with block->size of the remaining large
+   free block are updated accordingly. The arrow there represents the
+   link which now points to a block with an offset further along in
+   the segment.
+
+   When the block is freed, the steps are basically just reversed.
+   The block is put back and then the deallocate code looks at the block before and after to see 
+   if the blocks immediately before or after are free, and if so, the blocks are combined.
+   So we never have 2 free blocks next to each other, apart from the 0-sized dummy blocks.
+   This mostly prevents fragmentation.
+
+   Block start pointers are aligned to the system's word boundary (usually 8 bytes) with the `ALIGNWORD` macro.
+  
+5.2 Cache
+
+   Next up is apc_cache.c which implements the cache logic.
+
+   Having initialized the shared memory allocator (SMA), MINIT calls apc_cache_create() to initialize
+   the cache. The parameters to apc_cache_create() for APCu are mostly defined by various INI settings.
+
+   The function apc_cache_create() allocates and returns a struct of the type apc_cache_t, which describes
+   the created cache. Whenever you see functions that take a 'cache' argument, this is what they take.
+
+   In addition, apc_cache_create() allocates and initializes shared memory for the cache header
+   (apc_cache_header_t) and the hash slots of the hash table. Since the header and the hash slots are
+   in the shared memory, these values are accessible across all processes / threads and hence access
+   to it has to be locked. For this purpose, the header contains a read / write lock that allows access
+   to either multiple parallel readers or only one writer.
+
+   The number of hash slots is computed / user-defined through the apc.entries_hint ini value.
+   Therefore, the size of the hash slot array in shared memory can vary.
+
+   Each hash slot consists of a doubly linked list of entries. Because the cache layer is implemented
+   relocatable (independent of the shared memory's starting address), these doubly linked lists
+   use offsets relative to the starting address of the cache header instead of pointers. For this reason,
+   the array of hash slots is just an array of uintptr_t values, each containing an offset to the
+   first entry of the doubly linked list which belongs to this slot (a value of 0 means the slot is empty).
+
+   The macros ENTRYAT and ENTRYOF are used to convert between offsets and pointers to cache entries.
+   Both expect the presence of cache->header that points to the cache header in the shared memory segment:
+
+     #define ENTRYAT(offset) ((apc_cache_entry_t *)((uintptr_t)cache->header + (uintptr_t)offset))
+     #define ENTRYOF(entry) (((uintptr_t)entry) - (uintptr_t)cache->header)
+
+   In Addition, the functions apc_cache_wlocked_link_entry() and apc_cache_wlocked_unlink_entry()
+   help inserting or removing entries into or from doubly linked lists. Using them, you don't have to
+   worry about offsets when adding or removing entries from lists.
+
+   apc_cache_wlocked_insert() shows what happens when a cache entry is inserted:
+
+     /* calculate hash and entry */
+     apc_cache_hash_slot(cache, key, &h, &s);
+
+     uintptr_t *entry_offset = &cache->slots[s];
+
+     while (*entry_offset) {
+         apc_cache_entry_t *entry = ENTRYAT(*entry_offset);
+         /* process expired entries and check for entry with matching key */
+     }
+
+     /* link in new entry */
+     apc_cache_wlocked_link_entry(cache, entry_offset, new_entry);
+
+   During insertion, we get the array position in the hash slot array (cache->slots) by hashing
+   the key. If there are currently no other entries in the slot, we just link the new entry
+   (apc_cache_entry_t) into the slot, which results in a doubly linked list with one entry.
+
+   If there are other entries in the slot, we walk to the end of the linked list. As we traverse
+   the linked list, we also remove expired entries since we are right there looking at them and
+   we already have a write-lock. This is the only place where we remove stale entries unless the
+   shared memory segment is full and we try to cleanup the cache via apc_cache_default_expunge().
+
+   apc_cache_rlocked_find() simply tries to return an entry by searching for the key (hash lookup +
+   traversing the linked list). If an entry with the same key exists but its TTL has expired,
+   we return that it was not found.
+
+   Developers are encouraged to use apc_cache_fetch() instead of find for simplicity. This ensures
+   correct operation, because fetch sets up the read lock, the call to find, and takes care of
+   copying and releasing the entry from the cache to a provided zval*.
+
+   The function apc_cache_default_expunge() removes all expired entries and defragments the shared
+   memory to get as much free contiguous memory as possible. If the removal of expired entries and
+   defragmentation doesn't free enough contiguous memory, a full cache wipe is performed
+   via apc_cache_wlocked_real_expunge().
+
+5.3 Persistence
+
+   Before an entry can be inserted into a linked list, it must be created (persisted) in the
+   shared memory segment. This is done with apc_persist() in apc_persist.c. The following steps
+   are required to persist an entry:
+   - The amount of memory needed to store the entry is calculated by apc_persist_calc().
+   - The shared memory to persist the entry is allocated by apc_sma_malloc().
+   - The entry is persisted in the allocated shared memory by apc_persist_create_entry().
+
+   The persistence representation of an entry is implemented independent of its position
+   in the shared memory segment, which enables us to move around entries during defragmentation
+   and to make the entire cache relocatable. This is achieved by converting all entry's pointers
+   to offsets relative to the entry's starting address during persistence.
+
+   The function apc_unpersist() creates a process-local copy of the persisted entry's value (zval),
+   which can be passed to the php runtime after an entry has been found. During apc_unpersist(),
+   all offsets relative to the entry's starting address must be converted back to process-local
+   addresses / pointers before data access. It is important to note that this conversion must
+   occur on the stack or in process-local memory and that the shared memory representation of the
+   entry must not be modified, as this would break the persistence representation.
+
+   In some cases, the value (zval) of an entry is persisted by using a serializer. Whether a
+   serializer is used depends primarily on the data type of the value (e.g., arrays or objects).
+   For simple types as null/bool/int/float/string, serializers are unnecessary and not used.
+
+   The ini setting `apc.serializer` can be used to customize the `apc_serializer_t *serializer`.
+   This affects which serializer is used (Default: apc.serializer=php).
+
+   APCu can be configured to use third-party serializers if they are compiled with support for apcu.
+   For example, `apc.serializer=igbinary` (https://github.com/igbinary/igbinary) can be used for
+   generally faster unserialization and lower memory usage than apc.serializer=php
+   (requires that igbinary is configured and compiled after APCu is installed)
+
+6. Relocatable design
+
+   All layers of APCu are implemented in a relocatable manner. The goal of the relocatable design
+   is to allow independent processes to attach to the same shared memory segment in the future, even
+   if they use different starting addresses for the shared memory segment. This is achieved by using
+   offset-based addressing instead of pointers in all layers of APCu. Therefore, you will not find
+   any pointers in the entire shared memory segment. So, do not store pointers (absolute addresses)
+   in the shared memory segment, as doing so will likely break the relocatable design!
+
+
+If you made it to the end of this, you should have a pretty good idea of where things are in
+the code. There is much more reading to do in headers ... good luck ...

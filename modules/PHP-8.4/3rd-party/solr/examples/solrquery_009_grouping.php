@@ -1,3 +1,34 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:c255db49595e28bb1487b431f152ed7811f6a3fe2c1afd0ddef51887c51dd821
-size 621
+<?php
+
+include "bootstrap.php";
+
+$options = array
+(
+		'hostname' => SOLR_SERVER_HOSTNAME,
+		'login'    => SOLR_SERVER_USERNAME,
+		'password' => SOLR_SERVER_PASSWORD,
+		'port'     => SOLR_SERVER_PORT,
+		'path'     => SOLR_SERVER_PATH
+);
+
+$client = new SolrClient($options);
+
+$query = new SolrDismaxQuery('*:*');
+
+$query->setRows(4);
+
+$query->setGroup(true);
+
+$query->addGroupField('manu_s_id');
+
+$query->setGroupLimit(2);
+
+$query->addGroupSortField('price', SolrQuery::ORDER_ASC);
+
+$query->setGroupNGroups(true);
+
+$query_response = $client->query($query);
+
+$response = $query_response->getResponse();
+
+print_r($response);

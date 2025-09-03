@@ -1,3 +1,14 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a81c2c51386312b5fc44f285fa3effbe19e94220848161e122542bddbd2fe6f9
-size 386
+<?php
+/* TODO: Maybe use bufferevent pairs to complete example? */
+
+function read_callback_proxy($bev, $other_bev) {
+	/* One might use a function like this implementing
+	   	a simple proxy: it will take data from one connection (on
+	   	$bev), and write it to another, copying as little as
+	   	possible.
+	 */
+	bufferevent_read_buffer($bev,
+		bufferevent_get_output($other_bev));
+}
+
+?>

@@ -1,3 +1,15 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:17dbaf2e7c1a6d0c1b1739a1f5b85982e3da91f5ca26d23d13b3d20d8c718fc3
-size 965
+<?php
+/* you need to register a consumer key at https://www.google.com/accounts/ManageDomains, after registering you are given the secret */
+define('OAUTH_CONSUMER_KEY',"nil");
+define('OAUTH_CONSUMER_SECRET',"nil");
+
+/* api uri's */
+define('GOOGLE_OAUTH_REQUEST_TOKEN_API', 'https://www.google.com/accounts/OAuthGetRequestToken');
+define('GOOGLE_OAUTH_ACCESS_TOKEN_API', 'https://www.google.com/accounts/OAuthGetAccessToken');
+define('GOOGLE_OAUTH_AUTHORIZE_API', 'https://www.google.com/accounts/OAuthAuthorizeToken');
+
+/* full PoCo developer guide for Google is at http://code.google.com/apis/contacts/docs/poco/1.0/developers_guide.html */
+define('GOOGLE_POCO_CONTACT_INFO_API', 'http://www-opensocial.googleusercontent.com/api/people/@me/@self');
+define('GOOGLE_POCO_ALL_CONTACTS', 'http://www-opensocial.googleusercontent.com/api/people/@me/@all');
+define('OAUTH_TMP_DIR', function_exists('sys_get_temp_dir') ? sys_get_temp_dir() : realpath($_ENV["TMP"]));
+?>

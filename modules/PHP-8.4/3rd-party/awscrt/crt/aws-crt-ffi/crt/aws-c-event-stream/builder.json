@@ -1,3 +1,8 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:91f9f8b6ce8200b9da6402e30261f1ca78334aeead3bd55aff44fb926cb72719
-size 166
+{
+    "name": "aws-c-event-stream",
+    "upstream": [
+        { "name": "aws-c-common" },
+        { "name": "aws-c-io" },
+        { "name": "aws-checksums" }
+    ]
+}

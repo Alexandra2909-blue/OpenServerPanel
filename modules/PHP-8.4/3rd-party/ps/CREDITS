@@ -1,3 +1,3 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ead7c49716741cd823ece15cc729f1dcd334743d9a5364e97c3f00530cb5538f
-size 104
+pslib was created by Uwe Steinmann
+
+Thanks to Remi Collet to make release 1.4.4 build for PHP7 and PHP8

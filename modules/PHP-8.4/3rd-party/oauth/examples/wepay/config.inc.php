@@ -1,3 +1,9 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e770f82defa24c1108e62f7a59c342c381d60dcd9b07c4433c6ca93ce2f52c25
-size 463
+<?php
+/* 
+   Please register your application at https://www.wepay.com/developer/register
+   You can use the consumer key and secret listed here for limited testing, but it
+   may be rate limited, so you are better off registering your own.
+*/
+define('OAUTH_CONSUMER_KEY', '388b24438fe93778e9129b164bb192');
+define('OAUTH_CONSUMER_SECRET', 'd6f0a2678c');
+define('OAUTH_TMP_DIR', function_exists('sys_get_temp_dir') ? sys_get_temp_dir() : realpath($_ENV["TMP"]));

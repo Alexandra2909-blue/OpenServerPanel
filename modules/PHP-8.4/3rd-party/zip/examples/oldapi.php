@@ -1,3 +1,17 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:63e5f881a0613d1b54a7c07649433d1ce825f13da1cc9d63e197519a44a237c6
-size 374
+<?php
+
+$zip = zip_open('examples/test1.zip');
+var_dump($zip);
+
+if ($zip) {
+	$i = 0;
+	while ($zip_entry = zip_read($zip)) {
+		var_dump($zip_entry);
+		$txt = zip_entry_read($zip_entry, 10);
+        echo $i . ": " . $txt . "size: " . zip_entry_filesize($zip_entry) . 
+			"comp_method: " . zip_entry_compressionmethod($zip_entry) . 
+			"\n";
+		$i++;
+	}
+	var_dump($zip_entry);
+}

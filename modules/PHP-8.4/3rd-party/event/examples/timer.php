@@ -1,3 +1,10 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:f1d37257ac2efccd26d2086cf8f7e7c2d48ab13e7e7855ae2ff323871b9560c9
-size 202
+<?php
+$base = new EventBase();
+$e = new Event($base, -1, Event::TIMEOUT, function($fd, $what, $e) {
+	echo "1 seconds elapsed\n";
+	//$e->delTimer();
+});
+$e->data = $e;
+$e->addTimer(1);
+$base->loop();
+?>

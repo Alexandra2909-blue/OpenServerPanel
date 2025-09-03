@@ -1,3 +1,8 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:85cfd66e3beb41096988b716fd6233d460fcafb0539c4c9ecab22f239f4396e5
-size 467
+<?php
+/* you need to register a consumer key at https://fireeagle.yahoo.net/developer, after registering you are given the secret, and the general purpose token/secret */
+define('OAUTH_CONSUMER_KEY','fookey');
+define('OAUTH_CONSUMER_SECRET','foosecret');
+define('GENERAL_PURPOSE_TOKEN','footoken');
+define('GENERAL_PURPOSE_TOKEN_SECRET','footokensecret');
+define('OAUTH_TMP_DIR', function_exists('sys_get_temp_dir') ? sys_get_temp_dir() : realpath($_ENV["TMP"]));
+?>

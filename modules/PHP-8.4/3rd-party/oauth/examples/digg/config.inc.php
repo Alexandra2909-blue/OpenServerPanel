@@ -1,3 +1,6 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5e845f7adb21590b23df02cfcc2ea38710db778b414d361b71415062ac4f6e67
-size 144
+<?php
+
+define('DIGG_CONSUMER_KEY', '541f25b553ea2e0270f3e000051822cc');
+define('DIGG_CONSUMER_SECRET', '5e491f5911e48fd0ce7544cebd6745c9');
+
+?>

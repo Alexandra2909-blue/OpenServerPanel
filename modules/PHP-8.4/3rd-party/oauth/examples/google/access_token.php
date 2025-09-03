@@ -1,3 +1,12 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:64abbfa648dfd5f74bdd6cdd55c79f59e44e178000711e91e63ee162c0688063
-size 622
+<?php
+require("config.inc.php");
+try {
+	$o = new OAuth(OAUTH_CONSUMER_KEY,OAUTH_CONSUMER_SECRET,OAUTH_SIG_METHOD_HMACSHA1,OAUTH_AUTH_TYPE_URI);
+	$request_token_info = unserialize(file_get_contents(OAUTH_TMP_DIR . "/request_token_resp"));
+	$o->setToken($request_token_info["oauth_token"],$request_token_info["oauth_token_secret"]);
+	$arrayResp = $o->getAccessToken("https://www.google.com/accounts/OAuthGetAccessToken");
+	file_put_contents(OAUTH_TMP_DIR . "/access_token_resp",serialize($arrayResp));
+	echo "Finished getting the access token!\n";
+} catch(OAuthException $E) {
+	echo "Response: ". $E->lastResponse . "\n";
+}

@@ -1,3 +1,21 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a1dacca4ebee8da7de81ee60e9b84f36f48cd46d29465512a20d3e7d3b8ff02d
-size 495
+<?php
+include('common.inc.php');
+
+try {
+	$provider = new OAuthProvider($params);
+
+	$provider->your_own_member = "this is passed to every callback";
+
+	$provider->consumerHandler('lookupConsumer');
+
+	$provider->timestampNonceHandler('timestampNonceChecker');
+
+	$provider->tokenHandler('tokenHandler');
+
+	$provider->checkOAuthRequest("http://localhost/a_private_api.php", PHP_SAPI=="cli" ? OAUTH_HTTP_METHOD_GET : NULL);
+
+} catch (OAuthException $E) {
+	echo OAuthProvider::reportProblem($E);
+}
+
+?>

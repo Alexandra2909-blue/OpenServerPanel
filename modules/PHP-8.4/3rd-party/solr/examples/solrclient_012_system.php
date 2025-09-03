@@ -1,3 +1,20 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:f241463a1dbf007528e5f5cb14cdba5b552a8426b43baf8f6329c7c5097c2169
-size 388
+<?php
+
+include "bootstrap.php";
+
+$options = array
+(
+    'hostname' => SOLR_SERVER_HOSTNAME,
+    'login'    => SOLR_SERVER_USERNAME,
+    'password' => SOLR_SERVER_PASSWORD,
+    'port'     => SOLR_SERVER_PORT,
+    'path'     => SOLR_SERVER_PATH,
+);
+
+$client = new SolrClient($options);
+
+$query_response = $client->system();
+
+$response = $query_response->getResponse();
+
+print_r($response);

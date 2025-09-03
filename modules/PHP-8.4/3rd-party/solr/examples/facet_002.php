@@ -1,3 +1,30 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:960e6f547187ab42c8af82b24994b065a27af726d0c1ce84f47d210c1217f757
-size 631
+<?php
+
+include "bootstrap.php";
+
+$options = array
+(
+    'hostname' => SOLR_SERVER_HOSTNAME,
+    'login'    => SOLR_SERVER_USERNAME,
+    'password' => SOLR_SERVER_PASSWORD,
+    'port'     => SOLR_SERVER_PORT,
+    'path'     => SOLR_SERVER_PATH,
+);
+
+$client = new SolrClient($options);
+
+$query = new SolrQuery('*:*');
+
+$query->setFacet(true);
+
+$query->addFacetField('cat')->addFacetField('name')->setFacetMinCount(2);
+
+$query->setFacetMinCount(4, 'name');
+
+$updateResponse = $client->query($query);
+
+$response_array = $updateResponse->getResponse();
+
+$facet_data = $response_array->facet_counts->facet_fields;
+
+print_r($facet_data);

@@ -1,3 +1,4 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:0b0df6c94b4c4f00a0c353710fbf4135595926c3a122fb31b57e2b7f02e98343
-size 311
+## Code of Conduct
+This project has adopted the [Amazon Open Source Code of Conduct](https://aws.github.io/code-of-conduct). 
+For more information see the [Code of Conduct FAQ](https://aws.github.io/code-of-conduct-faq) or contact 
+opensource-codeofconduct@amazon.com with any additional questions or comments.

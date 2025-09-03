@@ -1,3 +1,52 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9718de9a79d9adc81afd0902733336b1d490dad320763b555b82982a944bb0e4
-size 778
+<?php
+
+/**
+ * stub class representing AMQPDecimal from pecl-amqp
+ *
+ * @readonly
+ */
+final /* readonly */ class AMQPDecimal implements AMQPValue
+{
+    /**
+     * @var int
+     */
+    public const EXPONENT_MIN = 0;
+
+    /**
+     * @var int
+     */
+    public const EXPONENT_MAX = 255;
+
+    /**
+     * @var int
+     */
+    public const SIGNIFICAND_MIN = 0;
+
+    /**
+     * @var int
+     */
+    public const SIGNIFICAND_MAX = 4294967295;
+
+    private int $exponent;
+
+    private int $significand;
+
+    /**
+     * @throws AMQPValueException
+     */
+    public function __construct(int $exponent, int $significand)
+    {
+    }
+
+    public function getExponent(): int
+    {
+    }
+
+    public function getSignificand(): int
+    {
+    }
+
+    public function toAmqpValue()
+    {
+    }
+}

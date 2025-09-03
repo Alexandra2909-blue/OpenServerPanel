@@ -1,3 +1,13 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9d82e4e318b4851d2fe99dc82e767dfb4c4534bb5ce125b7ff5c70ad32f2ab5d
-size 313
+<?php
+$z = new ZipArchive;
+$z->open('a.zip', ZIPARCHIVE::CREATE);
+
+/* or 'remove_all_path' => 0*/
+$options = array('remove_path' => '/home/pierre/cvs/gd/libgd/tests',
+'add_path' => 'images/',
+);
+
+$found = $z->addPattern("/(\.png)$/i", "/home/pierre/cvs/gd/libgd/tests", $options);
+var_dump($found);
+$z->close();
+

@@ -1,3 +1,19 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:188d0232b4f40089143e3a4e7aed0d8c055c66c4c6c961eb4d7069c8b553803f
-size 839
+<?php
+/* the important difference here is that there is no user auth required, in other words, it is only for api's which do not require access to private user information */
+require("config.inc.php");
+try {
+	$o = new OAuth(OAUTH_CONSUMER_KEY,OAUTH_CONSUMER_SECRET,OAUTH_SIG_METHOD_HMACSHA1,OAUTH_AUTH_TYPE_AUTHORIZATION);
+
+    /* fire eagle uses something called a general purpose token/secret for request signing, a setToken call will suffice to handle it */
+    $o->setToken(GENERAL_PURPOSE_TOKEN,GENERAL_PURPOSE_TOKEN_SECRET);
+
+	$o->fetch("https://www.some.tld/1.0/an_api");
+
+	$response_info = $o->getLastResponseInfo();
+	header("Content-Type: {$response_info["content_type"]}");
+	echo $o->getLastResponse();
+} catch(Exception $E) {
+	echo "Error: [".$E->errorMessage."]<br>\n";
+	echo "Response: [".$E->lastResponse."]<br>\n";
+	exit;
+}

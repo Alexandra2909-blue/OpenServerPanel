@@ -1,3 +1,6 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9fc7a9733900af6bd4ab71e7e7138335a11bb45fbfa0ec23c426314c083e801a
-size 129
+# News
+
+List of all features for the release
+
+## 0.3.1
+- Fixed segfault on PHP 5 in setting KDF key length and PBKDF2 iterations

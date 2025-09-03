@@ -1,3 +1,24 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:8b26bf6847c38e7c179c4cc679ef49d6b1f66fd59a94517b4b37b979b141dd1e
-size 457
+<?php
+$zip = new ZipArchive();
+
+echo $zip->filename . "\n";
+$zip->open("test.zip");
+/*
+$zip->addFile("./modules/");
+$zip->addFile("./testempty");
+*/
+echo $zip->status . "\n";
+echo $zip->statusSys . "\n";
+
+echo $zip->numFiles . "\n";
+echo $zip->filename . "\n";
+var_dump($zip);
+$files = array('test', 'testdir/test2');
+if (!$zip->extractTo("./testext/path/to")) {
+	echo "error!\n";
+	echo $zip->status . "\n";
+	echo $zip->statusSys . "\n";
+
+}
+
+$zip->close();

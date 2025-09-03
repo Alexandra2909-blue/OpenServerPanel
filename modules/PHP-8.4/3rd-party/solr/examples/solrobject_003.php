@@ -1,3 +1,11 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:cb31a8d6c6f01dc8729a285cf6dec8393231667627f6adec920b1d7cbde2516b
-size 217
+<?php
+
+include "bootstrap.php";
+
+$xml_reponse = file_get_contents(EXAMPLE_RESPONSE_XML_1);
+
+$solrObject = SolrUtils::digestXMLResponse($xml_reponse);
+
+print_r($solrObject->system->threadDump->thread->stackTrace);
+
+?>

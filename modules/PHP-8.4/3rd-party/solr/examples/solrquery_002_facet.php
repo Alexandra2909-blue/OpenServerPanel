@@ -1,3 +1,27 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:93b08e086f9282fb9eeabfaa1a5f3e86205b1c40889f1e29d248d9af80db09ff
-size 606
+<?php
+
+$query = new SolrQuery();
+
+$query->setFacet(0);
+
+$query->addFacetField('israel')->addFacetField('israel2');
+
+$query->addFacetQuery('silk')->addFacetQuery('name:june');
+
+$query->setFacetPrefix('A')->setFacetPrefix('C', 'june');
+
+$query->setFacetSort(1)->setFacetSort(0, 'june');
+
+//
+$query->setFacetLimit(98)->setFacetLimit(44, 'june');
+
+$query->setFacetOffset(110)->setFacetOffset(12, 'june');
+
+$query->setFacetMinCount(4)->setFacetMinCount(30, 'june');
+
+$query->setFacetMissing(1)->setFacetMissing(0, 'june');
+
+$query->setFacetMethod('enum')->setFacetMethod('fc', 'june');
+
+echo $query;
+echo "\n";

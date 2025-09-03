@@ -1,3 +1,15 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:cdbbe88d9ab7ffa3e8fd0e9e2af1d1198b36beea52bce2c7622e34b660358ce1
-size 606
+<?php
+require("config.inc.php");
+try {
+	$o = new OAuth(OAUTH_CONSUMER_KEY,OAUTH_CONSUMER_SECRET,OAUTH_SIG_METHOD_HMACSHA1,OAUTH_AUTH_TYPE_URI);
+    
+    $arrayResp = $o->getRequestToken("https://www.foo.tld/oauth/requestToken");
+
+	file_put_contents(OAUTH_TMP_DIR ."/request_token_resp",serialize($arrayResp));
+    
+    /* note: on the redirect there is no need to pass anything other than the oauth_token parameter */
+	header("Location: https://www.foo.tld/oauth/authorize?oauth_token={$arrayResp["oauth_token"]}");
+} catch(OAuthException $E) {
+	print_r($E);
+	echo "Response: ". $E->lastResponse . "\n";
+}

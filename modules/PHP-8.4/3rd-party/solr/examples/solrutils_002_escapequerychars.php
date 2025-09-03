@@ -1,3 +1,23 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:2eb46a25cb354fd25cdb90cc4c30469e3cbef14f209bfbcce5d184959e722ea1
-size 428
+<?php
+
+include "bootstrap.php";
+
+$options = array
+(
+    'hostname' => SOLR_SERVER_HOSTNAME,
+    'login'    => SOLR_SERVER_USERNAME,
+    'password' => SOLR_SERVER_PASSWORD,
+    'port'     => SOLR_SERVER_PORT,
+);
+
+$client = new SolrClient($options);
+
+$query = new SolrQuery();
+
+$userInput = 'USB/2';
+
+$escapedUserInput = SolrUtils::escapeQueryChars($userInput);
+
+$query->setQuery('text:'.$escapedUserInput);
+
+echo $query.PHP_EOL;

@@ -1,3 +1,30 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:d61647aea41d33478f60e03e74103dcc79debb0a6b487cc1514d36a5f082fc30
-size 457
+<?php
+
+$query = new SolrQuery();
+
+$query->setTerms(true);
+
+$query->setTermsField('israel');
+
+$query->setTermsLowerBound('june');
+
+$query->setTermsUpperBound('joshua');
+
+$query->setTermsIncludeLowerBound(false);
+
+$query->setTermsIncludeUpperBound(0);
+
+$query->setTermsMinCount(50);
+
+$query->setTermsMaxCount(200);
+
+$query->setTermsPrefix('A');
+
+$query->setTermsLimit(45);
+
+$query->setTermsReturnRaw(false);
+
+$query->setTermsSort(0);
+
+echo $query;
+echo "\n";

@@ -1,3 +1,25 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a386ce6ac38ba8bb7e56b6db3e1372e03394ed0b414e6312fcbdd59851d67054
-size 423
+<?php
+
+include "bootstrap.php";
+
+$doc = new SolrDocument();
+
+$second_doc = new SolrDocument();
+
+$doc->addField('id', 1123);
+
+$doc->features = "PHP Client Side";
+$doc->features = "Fast development cycles";
+
+$doc['cat'] = 'Software';
+$doc['cat'] = 'Custom Search';
+$doc->cat   = 'Information Technology';
+
+$second_doc->addField('cat', 'Lucene Search');
+
+$second_doc->merge($doc, true);
+
+print_r($second_doc->toArray());
+
+
+?>

@@ -1,3 +1,13 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:93627d555903677cc47a579579498ac6826ba49119682c00cf355cfcdf157b41
-size 305
+Originally developed at Facebook, XHProf was open sourced in Mar, 2009.
+
+XHProf is now maintained by Phacility.
+
+Creators:
+  Changhao Jiang
+  Kannan Muthukkaruppan
+  Venkat Venkataramani
+  Haiping Zhao
+
+Additional Contributors:
+  George Cabrera      - UI enhancements
+  Paul Saab           - FreeBSD port

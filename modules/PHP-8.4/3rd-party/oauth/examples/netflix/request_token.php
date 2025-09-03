@@ -1,3 +1,15 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9f5ddb62ec5437e8ba3703c3d8d5b9794fd69300cd048bd3062d9e05c9e9dc38
-size 659
+<?php
+require("config.inc.php");
+try {
+	$o = new OAuth(OAUTH_CONSUMER_KEY,OAUTH_CONSUMER_SECRET,OAUTH_SIG_METHOD_HMACSHA1,OAUTH_AUTH_TYPE_URI);
+	$arrayResp = $o->getRequestToken("http://api.netflix.com/oauth/request_token");
+	file_put_contents(OAUTH_TMP_DIR . "/request_token_resp",serialize($arrayResp));
+	$authorizeUrl = $arrayResp["login_url"] . "&oauth_consumer_key=" . OAUTH_CONSUMER_KEY . "&application_name=" . $arrayResp["application_name"];
+	if(PHP_SAPI=="cli") {
+		echo "Navigate your http client to: {$authorizeUrl}\n";
+	} else {
+		header("Location: {$authorizeUrl}");
+	}
+} catch(OAuthException $E) {
+	echo "Response: ". $E->lastResponse . "\n";
+}

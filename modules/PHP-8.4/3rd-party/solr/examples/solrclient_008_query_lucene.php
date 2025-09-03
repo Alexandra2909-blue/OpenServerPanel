@@ -1,3 +1,30 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9ebfd35a19a4da457d00de14fd59edd57a5e3ca0a373eded006edcfa9eb89729
-size 614
+<?php
+
+include "bootstrap.php";
+
+$options = array
+(
+    'hostname' => SOLR_SERVER_HOSTNAME,
+    'login'    => SOLR_SERVER_USERNAME,
+    'password' => SOLR_SERVER_PASSWORD,
+    'port'     => SOLR_SERVER_PORT,
+    'path'     => SOLR_SERVER_PATH,
+);
+
+$client = new SolrClient($options);
+
+$query = new SolrQuery();
+
+$query->setQuery('manu:"Apple Computer Inc." OR text:apple');
+
+$query->setStart(0);
+
+$query->setRows(50);
+
+$query->addField('cat')->addField('features')->addField('id')->addField('timestamp');
+
+$query_response = $client->query($query);
+
+$response = $query_response->getResponse();
+
+print_r($response);

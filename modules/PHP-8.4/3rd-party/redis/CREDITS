@@ -1,3 +1,5 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5bb9c8a8a2a18ad73cd5e318a1f2eb9d1863fd2698b71ac0bea2a528fa365206
-size 204
+Redis client extension for PHP
+Alfonso Jimenez (yo@alfonsojimenez.com)
+Nasreddine Bouafif (n.bouafif@owlient.eu)
+Nicolas Favre-Felix (n.favre-felix@owlient.eu)
+Michael Grunder (michael.grunder@gmail.com)

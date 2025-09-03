@@ -1,3 +1,28 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:f9c9e1e853e5acc7dd25aed5b2d2b1c5c872940edecb28e5eff2fc6efe2a7f58
-size 529
+<?php
+
+$query = new SolrQuery();
+
+$query->setMlt(1);
+
+$query->setMltCount(55)->setMltCount(90);
+
+$query->addMltField('june')->addMltField('joshua')->addMltField('mom')->removeMltField('joshua');
+
+$query->addMltQueryField('june', 0.0)->addMltQueryField('israel', 9.558);
+
+$query->setMltMinTermFrequency(9);
+
+$query->setMltMinDocFrequency(5);
+
+$query->setMltMinWordLength(8);
+
+$query->setMltMaxWordLength(99);
+
+$query->setMltMaxNumTokens(6);
+
+$query->setMltMaxNumQueryTerms(2);
+
+$query->setMltBoost(true);
+
+echo $query;
+echo "\n";

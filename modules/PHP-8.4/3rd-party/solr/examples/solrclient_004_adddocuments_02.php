@@ -1,3 +1,31 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:b9ec2151e2bbd63397186070938f6344eb940f3bafabb15bc5d0bd2e7c87b6e8
-size 626
+<?php
+
+include "bootstrap.php";
+
+$options = array
+(
+    'hostname' => SOLR_SERVER_HOSTNAME,
+    'login'    => SOLR_SERVER_USERNAME,
+    'password' => SOLR_SERVER_PASSWORD,
+    'port'     => SOLR_SERVER_PORT,
+    'path'     => SOLR_SERVER_PATH,
+);
+
+$client = new SolrClient($options);
+
+$doc = new SolrInputDocument();
+
+$doc->addField('id', 334455);
+$doc->addField('cat', 'Software');
+$doc->addField('cat', 'Lucene');
+
+$doc2 = clone $doc;
+
+$doc2->deleteField('id');
+$doc2->addField('id', 334456);
+
+$docs = array($doc, $doc2);
+
+$updateResponse = $client->addDocuments($docs, true, 1024);
+
+print $updateResponse->getRawRequest();
