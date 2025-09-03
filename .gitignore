@@ -1,5 +1,5 @@
-release/
-addons/
-bin/
+release/*
+addons/*
+bin/*
 modules/*
 !modules/*/ospanel_data/**
