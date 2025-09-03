@@ -1322,6 +1322,152 @@ function Copy-ComposerFiles {
     Write-Success "Composer files copy operation completed"
 }
 
+function Copy-PhpMibFiles {
+    <#
+    .SYNOPSIS
+    Downloads and copies SNMP MIB files to PHP modules
+    #>
+    
+    Write-Banner "COPYING PHP MIB FILES" "Magenta"
+    Write-Host ""
+    
+    # Define MIB archives for different PHP versions
+    $mibArchives = @{
+        "7.2" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
+        "7.3" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
+        "7.4" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
+        "8.0" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
+        "8.1" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
+        "8.2" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
+        "8.3" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
+        "8.4" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
+    }
+    
+    $processedVersions = 0
+    $skippedVersions = 0
+    $failedVersions = 0
+    
+    foreach ($version in $mibArchives.Keys) {
+        $phpModuleDir = "..\modules\PHP-$version"
+        $extrasDir = Join-Path $phpModuleDir "extras"
+        $mibsDir = Join-Path $extrasDir "mibs"
+        
+        Write-Host ""
+        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host " PHP-$version MIB FILES" -ForegroundColor Cyan
+        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host ""
+        
+        # Check if PHP module exists
+        if (-not (Test-Path $phpModuleDir)) {
+            Write-Skip "PHP module directory not found: $phpModuleDir"
+            $skippedVersions++
+            continue
+        }
+        
+        $archiveUrl = $mibArchives[$version]
+        
+        try {
+            Write-Progress "MIB-PHP-$version" "Processing MIB files for PHP $version"
+            
+            # Create temporary directory
+            $tmpDir = "$env:TEMP\mib_$(Get-Random)"
+            $zipPath = "$tmpDir.zip"
+            
+            Write-Progress "MIB-PHP-$version" "Downloading archive" $archiveUrl
+            
+            # Download archive
+            if ($UseProxy) {
+                & curl --socks5 $ProxyUrl -f -s -L -o $zipPath $archiveUrl 2>$null
+            } else {
+                & curl -f -s -L -o $zipPath $archiveUrl 2>$null
+            }
+            
+            if (-not (Test-Path $zipPath)) {
+                Write-Error "Failed to download MIB archive for PHP $version"
+                $failedVersions++
+                continue
+            }
+            
+            $fileSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+            Write-Success "Archive downloaded successfully ($fileSize MB)"
+            
+            # Extract archive
+            Write-Progress "MIB-PHP-$version" "Extracting archive to temporary directory"
+            Expand-Archive -Path $zipPath -DestinationPath $tmpDir -Force
+            
+            # Find mibs subdirectory in extracted content
+            $mibsSourceDir = Get-ChildItem -Path $tmpDir -Directory -Recurse | 
+                             Where-Object { $_.Name -eq "mibs" } | 
+                             Select-Object -First 1
+            
+            if (-not $mibsSourceDir) {
+                Write-Warning "MIB subdirectory not found in archive for PHP $version"
+                Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+                $failedVersions++
+                continue
+            }
+            
+            Write-Progress "MIB-PHP-$version" "Found MIB directory: $($mibsSourceDir.FullName)"
+            
+            # Create extras directory if it doesn't exist
+            if (-not (Test-Path $extrasDir)) {
+                New-Item -ItemType Directory -Path $extrasDir -Force | Out-Null
+                Write-Success "Created extras directory: $extrasDir"
+            }
+            
+            # Remove existing mibs directory if it exists (for clean overwrite)
+            if (Test-Path $mibsDir) {
+                Remove-Item $mibsDir -Recurse -Force
+                Write-Success "Removed existing MIB directory for clean overwrite"
+            }
+            
+            # Copy mibs directory to PHP module extras
+            Write-Progress "MIB-PHP-$version" "Copying MIB files to PHP module"
+            Copy-Item -Path $mibsSourceDir.FullName -Destination $extrasDir -Recurse -Force
+            
+            # Count copied files
+            $copiedFiles = Get-ChildItem -Path $mibsDir -File -Recurse -ErrorAction SilentlyContinue
+            $fileCount = if ($copiedFiles) { $copiedFiles.Count } else { 0 }
+            
+            Write-Success "Copied $fileCount MIB files to $mibsDir"
+            
+            # Clean up temporary files
+            Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Success "Temporary files cleaned up"
+            
+            $processedVersions++
+            Write-Success "MIB files successfully processed for PHP $version"
+        }
+        catch {
+            Write-Error "Critical error processing MIB files for PHP $version : $_"
+            # Clean up on error
+            Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+            $failedVersions++
+        }
+    }
+    
+    # Show summary
+    Write-Host ""
+    Write-Host "📊 PHP MIB processing results:" -ForegroundColor White
+    Write-Host ""
+    Write-Host "   Total PHP versions:  " -NoNewline -ForegroundColor Gray
+    Write-Host $mibArchives.Count -ForegroundColor White
+    Write-Host "   Processed:           " -NoNewline -ForegroundColor Gray
+    Write-Host $processedVersions -ForegroundColor Green
+    Write-Host "   Skipped:             " -NoNewline -ForegroundColor Gray
+    Write-Host $skippedVersions -ForegroundColor Yellow
+    Write-Host "   Errors:              " -NoNewline -ForegroundColor Gray
+    Write-Host $failedVersions -ForegroundColor Red
+    Write-Host ""
+    
+    $successRate = if ($mibArchives.Count -gt 0) { [math]::Round(($processedVersions / $mibArchives.Count) * 100, 1) } else { 0 }
+    Write-Host "   Success rate:        " -NoNewline -ForegroundColor Gray
+    Write-Host "$successRate%" -ForegroundColor $(if ($successRate -ge 90) { "Green" } elseif ($successRate -ge 70) { "Yellow" } else { "Red" })
+    
+    Write-Success "PHP MIB files copy operation completed"
+}
+
 function Copy-AdditionalFiles {
     <#
     .SYNOPSIS
@@ -1627,6 +1773,11 @@ Write-Host ""
 
 # Copy Composer files
 Copy-ComposerFiles
+
+Write-Host ""
+
+# Copy PHP MIB files
+Copy-PhpMibFiles
 
 Write-Host ""
 
