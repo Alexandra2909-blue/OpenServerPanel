@@ -10,10 +10,10 @@
 
 # ================== SCRIPT CONFIGURATION ==================
 # Path to JSON file with addons matrix
-$JsonPath       = "..\resources\matrix\infodata.json"
+$JsonPath       = "..\resources\matrix\matrix-infodata.json"
 
 # Path to JSON file with utilities matrix
-$BinMatrixPath  = "..\resources\matrix\bin.json"
+$BinMatrixPath  = "..\resources\matrix\matrix-bin.json"
 
 # Base directory for placing addons
 $BaseAddonsDir  = "..\addons"
@@ -1320,7 +1320,6 @@ function Copy-ComposerFiles {
     }
     
     Write-Success "Composer files copy operation completed"
-    return $true
 }
 
 function Copy-AdditionalFiles {
@@ -1440,7 +1439,7 @@ function Show-Summary {
     Write-Host ""
     
     $toolSuccessRate = if ($script:TotalTools -gt 0) { [math]::Round(($script:ProcessedTools / $script:TotalTools) * 100, 1) } else { 0 }
-    Write-Host "   Utility success rate:" -NoNewline -ForegroundColor Gray
+    Write-Host "   Utility success rate: " -NoNewline -ForegroundColor Gray
     Write-Host "$toolSuccessRate%" -ForegroundColor $(if ($toolSuccessRate -ge 90) { "Green" } elseif ($toolSuccessRate -ge 70) { "Yellow" } else { "Red" })
     Write-Host ""
 }
