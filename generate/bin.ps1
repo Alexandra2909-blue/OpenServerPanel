@@ -1374,6 +1374,7 @@ function Copy-AdditionalFiles {
     # Copy local file with overwrite
     $localCopies = @{
         "..\..\OSPSource\Win64\Release\OpenServerPanel.exe" = "..\bin\ospanel.exe"
+        "..\resources\dist\README.txt" = "..\user\geo\README.txt"
     }
     
     foreach ($sourcePath in $localCopies.Keys) {
@@ -1450,7 +1451,7 @@ function Show-Summary {
 Write-Banner "AUTOMATED OSPANEL ADDONS AND UTILITIES BUILD" "Cyan"
 Write-Host ""
 
-$folders = @("..\addons", "..\bin", "..\config", "..\data")
+$folders = @("..\addons", "..\bin", "..\config", "..\data", "..\user\geo")
 foreach ($folder in $folders) {
     if (-not (Test-Path $folder)) {
         New-Item -ItemType Directory -Path $folder -Force | Out-Null
@@ -1631,5 +1632,31 @@ Copy-AdditionalFiles
 # Show final statistics
 Write-Host ""
 Show-Summary
+
+# ==================== MANUAL UPDATE NOTICE ====================
+Write-Host ""
+Write-Banner "MANUAL UPDATE REQUIRED" "Yellow"
+Write-Host ""
+Write-Host "⚠️  " -ForegroundColor Yellow -NoNewline
+Write-Host "The following geodata files require manual update:" -ForegroundColor White
+Write-Host ""
+Write-Host "📍 IP Geolocation Databases:" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "   1. DB-IP Country Lite Database" -ForegroundColor White
+Write-Host "      🌐 " -ForegroundColor Green -NoNewline
+Write-Host "https://db-ip.com/db/download/ip-to-country-lite" -ForegroundColor Gray
+Write-Host ""
+Write-Host "   2. GeoIP Legacy Database" -ForegroundColor White
+Write-Host "      🌐 " -ForegroundColor Green -NoNewline
+Write-Host "https://mailfud.org/geoip-legacy/" -ForegroundColor Gray
+Write-Host ""
+Write-Host "   3. MaxMind GeoOpen Database (MMDB format)" -ForegroundColor White
+Write-Host "      🌐 " -ForegroundColor Green -NoNewline
+Write-Host "https://data.public.lu/en/datasets/geo-open-ip-address-geolocation-per-country-in-mmdb-format/" -ForegroundColor Gray
+Write-Host ""
+Write-Host "💡 " -ForegroundColor Blue -NoNewline
+Write-Host "Please download and update these geodata files manually to ensure" -ForegroundColor White
+Write-Host "   accurate IP geolocation functionality in your applications." -ForegroundColor White
+Write-Host ""
 
 Write-Banner "ADDON AND UTILITY BUILD COMPLETED" "Green"
