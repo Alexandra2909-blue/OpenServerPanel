@@ -10,6 +10,8 @@
 /resources/dist/** filter=lfs diff=lfs merge=lfs -text
 /modules/*/ospanel_data/** text
 /addons/*/ospanel_data/** text
-/modules/*/ospanel_data/default_data/** filter=lfs diff=lfs merge=lfs -text
+/modules/MariaDB*/ospanel_data/default_data/** filter=lfs diff=lfs merge=lfs -text
+/modules/MySQL*/ospanel_data/default_data/** filter=lfs diff=lfs merge=lfs -text
+/modules/PostgreSQL*/ospanel_data/default_data/** filter=lfs diff=lfs merge=lfs -text
 /modules/Nginx*/conf/** text
 /modules/Apache*/conf/** text
