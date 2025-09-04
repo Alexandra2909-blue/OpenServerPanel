@@ -531,7 +531,7 @@
                 "version": "1.6.0"
             }
         },
-        "MDBTools":
+        "MongoTools":
         {
             "DownloadUrl": "https://fastdl.mongodb.org/tools/db/mongodb-database-tools-windows-x86_64-100.13.0.zip",
             "ZipPath": "addon.zip",
