@@ -6,8 +6,8 @@
 /system/public_html/dist/** filter=lfs diff=lfs merge=lfs -text
 /system/public_html/plugins/** filter=lfs diff=lfs merge=lfs -text
 /resources/dist/** filter=lfs diff=lfs merge=lfs -text
-/modules/MariaDB*/ospanel_data/default_data/** filter=lfs diff=lfs merge=lfs -text
-/modules/MySQL*/ospanel_data/default_data/** filter=lfs diff=lfs merge=lfs -text
-/modules/PostgreSQL*/ospanel_data/default_data/** filter=lfs diff=lfs merge=lfs -text
-/modules/Nginx*/conf/** text
-/modules/Apache*/conf/** text
+/resources/modules/MariaDB*/ospanel_data/default_data/** filter=lfs diff=lfs merge=lfs -text
+/resources/modules/MySQL*/ospanel_data/default_data/** filter=lfs diff=lfs merge=lfs -text
+/resources/modules/PostgreSQL*/ospanel_data/default_data/** filter=lfs diff=lfs merge=lfs -text
+/resources/modules/Nginx*/conf/** text
+/resources/modules/Apache*/conf/** text
