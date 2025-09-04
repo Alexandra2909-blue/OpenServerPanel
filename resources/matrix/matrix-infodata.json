@@ -1080,6 +1080,9 @@
             {
                 "English": "https://dev.mysql.com/doc/refman/5.6/en/"
             },
+            "DownloadUrl": "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.6.51-winx64.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1099,6 +1102,9 @@
             {
                 "English": "https://dev.mysql.com/doc/refman/5.7/en/"
             },
+            "DownloadUrl": "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.44-winx64.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1118,6 +1124,9 @@
             {
                 "English": "https://dev.mysql.com/doc/refman/8.0/en/"
             },
+            "DownloadUrl": "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.43-winx64.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1137,6 +1146,9 @@
             {
                 "English": "https://dev.mysql.com/doc/refman/8.4/en/"
             },
+            "DownloadUrl": "https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-8.4.6-winx64.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1157,6 +1169,9 @@
                 "English": "https://nginx.org/en/docs/",
                 "Russian": "https://nginx.org/ru/docs/"
             },
+            "DownloadUrl": "https://github.com/OSPanel/nginx/releases/download/release-1.29.1/nginx-1.29.1.zip",
+            "ZipPath": "addon.zip",
+            "help": "-h",
             "main":
             {
                 "architecture": "x64",
@@ -1345,6 +1360,9 @@
                 "English": "https://www.postgresql.org/docs/11/index.html",
                 "Russian": "https://postgrespro.ru/docs/postgresql/11/index?lang=ru"
             },
+            "DownloadUrl": "https://sbp.enterprisedb.com/getfile.jsp?fileid=1258670",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1355,7 +1373,7 @@
                 "license_type": "PostgreSQL License",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "11.22"
+                "version": "11.21"
             }
         },
         "PostgreSQL-12":
@@ -1365,6 +1383,9 @@
                 "English": "https://www.postgresql.org/docs/12/index.html",
                 "Russian": "https://postgrespro.ru/docs/postgresql/12/index?lang=ru"
             },
+            "DownloadUrl": "https://sbp.enterprisedb.com/getfile.jsp?fileid=1259241",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1385,6 +1406,9 @@
                 "English": "https://www.postgresql.org/docs/13/index.html",
                 "Russian": "https://postgrespro.ru/docs/postgresql/13/index?lang=ru"
             },
+            "DownloadUrl": "https://sbp.enterprisedb.com/getfile.jsp?fileid=1259705",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1405,6 +1429,9 @@
                 "English": "https://www.postgresql.org/docs/14/index.html",
                 "Russian": "https://postgrespro.ru/docs/postgresql/14/index?lang=ru"
             },
+            "DownloadUrl": "https://sbp.enterprisedb.com/getfile.jsp?fileid=1259699",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1425,6 +1452,9 @@
                 "English": "https://www.postgresql.org/docs/15/index.html",
                 "Russian": "https://postgrespro.ru/docs/postgresql/15/index?lang=ru"
             },
+            "DownloadUrl": "https://sbp.enterprisedb.com/getfile.jsp?fileid=1259693",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1445,6 +1475,9 @@
                 "English": "https://www.postgresql.org/docs/16/index.html",
                 "Russian": "https://postgrespro.ru/docs/postgresql/16/index?lang=ru"
             },
+            "DownloadUrl": "https://sbp.enterprisedb.com/getfile.jsp?fileid=1259687",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1465,6 +1498,9 @@
                 "English": "https://www.postgresql.org/docs/17/index.html",
                 "Russian": "https://postgrespro.ru/docs/postgresql/17/index?lang=ru"
             },
+            "DownloadUrl": "https://sbp.enterprisedb.com/getfile.jsp?fileid=1259681",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1484,6 +1520,9 @@
             {
                 "English": "https://www.rabbitmq.com/docs"
             },
+            "DownloadUrl": "https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.13.7/rabbitmq-server-windows-3.13.7.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1506,6 +1545,9 @@
             {
                 "English": "https://www.rabbitmq.com/docs"
             },
+            "DownloadUrl": "https://github.com/rabbitmq/rabbitmq-server/releases/download/v4.0.9/rabbitmq-server-windows-4.0.9.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1528,6 +1570,9 @@
             {
                 "English": "https://www.rabbitmq.com/docs"
             },
+            "DownloadUrl": "https://github.com/rabbitmq/rabbitmq-server/releases/download/v4.1.4/rabbitmq-server-windows-4.1.4.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1541,7 +1586,7 @@
                 "license_type": "MPL License 2.0",
                 "min_windows_ver": "6.1.7601",
                 "timestamp": "1651770000",
-                "version": "4.1.3"
+                "version": "4.1.4"
             }
         },
         "Redis":
@@ -1550,6 +1595,9 @@
             {
                 "English": "https://redis.io/docs/"
             },
+            "DownloadUrl": "https://github.com/zkteco-home/redis-windows/archive/refs/tags/8.2.1.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
