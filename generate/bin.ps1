@@ -7,7 +7,8 @@
 # Version:     2.1
 # Date:        2025
 # ================================================================================
-
+$env:LC_ALL = "en_US.UTF-8"; $env:LANG = "en_US.UTF-8"
+$env:TEMP = "A:"
 # ================== SCRIPT CONFIGURATION ==================
 # Path to JSON file with addons matrix
 $JsonPath       = "..\resources\matrix\matrix-infodata.json"
@@ -22,7 +23,7 @@ $BaseAddonsDir  = "..\addons"
 $BaseBinDir     = "..\bin"
 
 # Enable SOCKS5 proxy for file downloads (true/false)
-$UseProxy       = $false
+$UseProxy       = $true
 
 # SOCKS5 proxy for file downloads
 $ProxyUrl       = "127.0.0.1:1086"
@@ -2588,14 +2589,94 @@ function Process-MySQLModule {
     try {
         Write-Progress "MYSQL-PROCESSING" "Processing MySQL module"
 
-        # Standard extraction for now
-        Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+        # Create temporary directory
+        $tmpDir = "$env:TEMP\mysql_$(Get-Random)"
+
+        # Extract to temporary directory
+        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
+
+        # Find MySQL directory (usually mysql-* or similar)
+        $mysqlDir = Get-ChildItem -Path $tmpDir -Directory |
+                    Where-Object { $_.Name -like "mysql*" } |
+                    Select-Object -First 1
+
+        if ($mysqlDir) {
+            # Move contents from MySQL subfolder to module root
+            Get-ChildItem -Path $mysqlDir.FullName | ForEach-Object {
+                Move-Item -Path $_.FullName -Destination $DestDir -Force
+            }
+            Write-Success "Moved files from $($mysqlDir.Name) to module root"
+
+            # Remove empty MySQL directory
+            Remove-Item $mysqlDir.FullName -Force -ErrorAction SilentlyContinue
+        } else {
+            # Extract directly if no MySQL subfolder found
+            Get-ChildItem -Path $tmpDir | ForEach-Object {
+                Move-Item -Path $_.FullName -Destination $DestDir -Force
+            }
+            Write-Success "Files moved directly to module root"
+        }
+
+        # Clean up specific MySQL directories and files
+        Write-Progress "MYSQL-PROCESSING" "Cleaning up unnecessary MySQL files"
+
+        # Remove directories
+        $dirsToRemove = @("data", "include", "docs", "lib\plugin\debug", "lib\debug")
+        $removedDirs = 0
+
+        foreach ($dir in $dirsToRemove) {
+            $dirPath = Join-Path $DestDir $dir
+            if (Test-Path $dirPath) {
+                Remove-Item $dirPath -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Success "Removed directory: $dir"
+                $removedDirs++
+            }
+        }
+
+        # Remove specific files
+        $filesToRemove = @(
+            "my-default.ini",
+            "bin\mysqld-debug.exe",
+            "bin\mysql_configurator.exe",
+            "lib\libmysqld.dll"
+        )
+
+        $removedFiles = 0
+        foreach ($file in $filesToRemove) {
+            $filePath = Join-Path $DestDir $file
+            if (Test-Path $filePath) {
+                Remove-Item $filePath -Force -ErrorAction SilentlyContinue
+                Write-Success "Removed file: $file"
+                $removedFiles++
+            }
+        }
+
+        # Remove all *.lib and *.pdb files from entire directory structure
+        $libFiles = @(Get-ChildItem -Path $DestDir -Filter "*.lib" -File -Recurse -ErrorAction SilentlyContinue)
+        $pdbFiles = @(Get-ChildItem -Path $DestDir -Filter "*.pdb" -File -Recurse -ErrorAction SilentlyContinue)
+
+        foreach ($file in $libFiles) {
+            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
+        }
+
+        foreach ($file in $pdbFiles) {
+            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
+        }
+
+        $totalLibPdbFiles = $libFiles.Count + $pdbFiles.Count
+        if ($totalLibPdbFiles -gt 0) {
+            Write-Success "Removed $totalLibPdbFiles *.lib and *.pdb files"
+        }
+
+        # Clean up temporary directory
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 
         Write-Success "MySQL module processing completed"
         return $true
     }
     catch {
         Write-Error "Error processing MySQL module: $_"
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
         return $false
     }
 }
@@ -2619,8 +2700,34 @@ function Process-NginxModule {
     try {
         Write-Progress "NGINX-PROCESSING" "Processing Nginx module"
 
-        # Standard extraction for now
+        # Standard extraction
         Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+
+        # Clean up specific Nginx files and directories
+        Write-Progress "NGINX-PROCESSING" "Cleaning up unnecessary Nginx files"
+
+        $dirsToRemove = @("html", "logs", "temp")
+        $removedDirs = 0
+
+        foreach ($dir in $dirsToRemove) {
+            $dirPath = Join-Path $DestDir $dir
+            if (Test-Path $dirPath) {
+                Remove-Item $dirPath -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Success "Removed directory: $dir"
+                $removedDirs++
+            }
+        }
+
+        # Remove nginx.conf file
+        $nginxConfPath = Join-Path $DestDir "conf\nginx.conf"
+        if (Test-Path $nginxConfPath) {
+            Remove-Item $nginxConfPath -Force -ErrorAction SilentlyContinue
+            Write-Success "Removed file: conf\nginx.conf"
+        }
+
+        if ($removedDirs -gt 0) {
+            Write-Success "Cleaned up $removedDirs directories and configuration file"
+        }
 
         Write-Success "Nginx module processing completed"
         return $true
@@ -2681,14 +2788,76 @@ function Process-PostgreSQLModule {
     try {
         Write-Progress "POSTGRESQL-PROCESSING" "Processing PostgreSQL module"
 
-        # Standard extraction for now
-        Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+        # Create temporary directory
+        $tmpDir = "$env:TEMP\postgresql_$(Get-Random)"
+
+        # Extract to temporary directory
+        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
+
+        # Find pgsql directory
+        $pgsqlDir = Get-ChildItem -Path $tmpDir -Directory |
+                    Where-Object { $_.Name -eq "pgsql" } |
+                    Select-Object -First 1
+
+        if ($pgsqlDir) {
+            # Move contents from pgsql subfolder to module root
+            Get-ChildItem -Path $pgsqlDir.FullName | ForEach-Object {
+                Move-Item -Path $_.FullName -Destination $DestDir -Force
+            }
+            Write-Success "Moved files from pgsql to module root"
+
+            # Remove empty pgsql directory
+            Remove-Item $pgsqlDir.FullName -Force -ErrorAction SilentlyContinue
+        } else {
+            # Extract directly if no pgsql subfolder found
+            Get-ChildItem -Path $tmpDir | ForEach-Object {
+                Move-Item -Path $_.FullName -Destination $DestDir -Force
+            }
+            Write-Success "Files moved directly to module root"
+        }
+
+        # Clean up specific PostgreSQL directories and files
+        Write-Progress "POSTGRESQL-PROCESSING" "Cleaning up unnecessary PostgreSQL files"
+
+        # Remove directories
+        $dirsToRemove = @("pgAdmin 4", "pgAdmin 3", "include", "symbols", "lib\pkgconfig", "lib\pgxs")
+        $removedDirs = 0
+
+        foreach ($dir in $dirsToRemove) {
+            $dirPath = Join-Path $DestDir $dir
+            if (Test-Path $dirPath) {
+                Remove-Item $dirPath -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Success "Removed directory: $dir"
+                $removedDirs++
+            }
+        }
+
+        # Remove all *.lib and *.pdb files from entire directory structure
+        $libFiles = @(Get-ChildItem -Path $DestDir -Filter "*.lib" -File -Recurse -ErrorAction SilentlyContinue)
+        $pdbFiles = @(Get-ChildItem -Path $DestDir -Filter "*.pdb" -File -Recurse -ErrorAction SilentlyContinue)
+
+        foreach ($file in $libFiles) {
+            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
+        }
+
+        foreach ($file in $pdbFiles) {
+            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
+        }
+
+        $totalLibPdbFiles = $libFiles.Count + $pdbFiles.Count
+        if ($totalLibPdbFiles -gt 0) {
+            Write-Success "Removed $totalLibPdbFiles *.lib and *.pdb files"
+        }
+
+        # Clean up temporary directory
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 
         Write-Success "PostgreSQL module processing completed"
         return $true
     }
     catch {
         Write-Error "Error processing PostgreSQL module: $_"
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
         return $false
     }
 }
@@ -2712,14 +2881,53 @@ function Process-RabbitMQModule {
     try {
         Write-Progress "RABBITMQ-PROCESSING" "Processing RabbitMQ module"
 
-        # Standard extraction for now
-        Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+        # Create temporary directory
+        $tmpDir = "$env:TEMP\rabbitmq_$(Get-Random)"
+
+        # Extract to temporary directory
+        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
+
+        # Find RabbitMQ directory (usually rabbitmq-* or similar)
+        $rabbitmqDir = Get-ChildItem -Path $tmpDir -Directory |
+                       Where-Object { $_.Name -like "rabbitmq*" } |
+                       Select-Object -First 1
+
+        if ($rabbitmqDir) {
+            # Move contents from RabbitMQ subfolder to module root
+            Get-ChildItem -Path $rabbitmqDir.FullName | ForEach-Object {
+                Move-Item -Path $_.FullName -Destination $DestDir -Force
+            }
+            Write-Success "Moved files from $($rabbitmqDir.Name) to module root"
+
+            # Remove empty RabbitMQ directory
+            Remove-Item $rabbitmqDir.FullName -Force -ErrorAction SilentlyContinue
+        } else {
+            # Extract directly if no RabbitMQ subfolder found
+            Get-ChildItem -Path $tmpDir | ForEach-Object {
+                Move-Item -Path $_.FullName -Destination $DestDir -Force
+            }
+            Write-Success "Files moved directly to module root"
+        }
+
+        # Clean up specific RabbitMQ files
+        Write-Progress "RABBITMQ-PROCESSING" "Cleaning up unnecessary RabbitMQ files"
+
+        # Remove README.txt from etc directory
+        $readmePath = Join-Path $DestDir "etc\README.txt"
+        if (Test-Path $readmePath) {
+            Remove-Item $readmePath -Force -ErrorAction SilentlyContinue
+            Write-Success "Removed file: etc\README.txt"
+        }
+
+        # Clean up temporary directory
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 
         Write-Success "RabbitMQ module processing completed"
         return $true
     }
     catch {
         Write-Error "Error processing RabbitMQ module: $_"
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
         return $false
     }
 }
@@ -2743,14 +2951,74 @@ function Process-RedisModule {
     try {
         Write-Progress "REDIS-PROCESSING" "Processing Redis module"
 
-        # Standard extraction for now
-        Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+        # Create temporary directory
+        $tmpDir = "$env:TEMP\redis_$(Get-Random)"
+
+        # Extract to temporary directory
+        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
+
+        # Find Redis directory (usually redis-* or similar)
+        $redisDir = Get-ChildItem -Path $tmpDir -Directory |
+                    Where-Object { $_.Name -like "redis*" } |
+                    Select-Object -First 1
+
+        if ($redisDir) {
+            # Move contents from Redis subfolder to module root
+            Get-ChildItem -Path $redisDir.FullName | ForEach-Object {
+                Move-Item -Path $_.FullName -Destination $DestDir -Force
+            }
+            Write-Success "Moved files from $($redisDir.Name) to module root"
+
+            # Remove empty Redis directory
+            Remove-Item $redisDir.FullName -Force -ErrorAction SilentlyContinue
+        } else {
+            # Extract directly if no Redis subfolder found
+            Get-ChildItem -Path $tmpDir | ForEach-Object {
+                Move-Item -Path $_.FullName -Destination $DestDir -Force
+            }
+            Write-Success "Files moved directly to module root"
+        }
+
+        # Clean up specific Redis files
+        Write-Progress "REDIS-PROCESSING" "Cleaning up unnecessary Redis files"
+
+        $filesToRemove = @(
+            "redis.conf",
+            "install_redis.cmd"
+        )
+
+        $removedFiles = 0
+        foreach ($file in $filesToRemove) {
+            $filePath = Join-Path $DestDir $file
+            if (Test-Path $filePath) {
+                Remove-Item $filePath -Force -ErrorAction SilentlyContinue
+                Write-Success "Removed file: $file"
+                $removedFiles++
+            }
+        }
+
+        # Download RedisJson rejson.dll
+        Write-Progress "REDIS-PROCESSING" "Downloading RedisJson module"
+        try {
+            $rejsonUrl = "https://github.com/zkteco-home/RedisJson/raw/master/rejson.dll"
+            $rejsonPath = Join-Path $DestDir "rejson.dll"
+
+            Invoke-WebRequest -Uri $rejsonUrl -OutFile $rejsonPath -UseBasicParsing
+            Write-Success "Downloaded rejson.dll to module directory"
+        }
+        catch {
+            Write-Warning "Failed to download rejson.dll: $_"
+        }
+
+        # Clean up temporary directory
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 
         Write-Success "Redis module processing completed"
         return $true
     }
     catch {
         Write-Error "Error processing Redis module: $_"
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
         return $false
     }
 }
@@ -2910,7 +3178,7 @@ function Generate-ModuleHelpFiles {
 
     # Find executable files
 $executables = Get-ChildItem -Path $DestDir -Filter *.exe -Recurse -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -notin 'logresolve.exe','nslookup.exe' }
+    Where-Object { $_.Name -notin 'logresolve.exe','nslookup.exe','isolationtester.exe' }
 
     if (-not $executables) {
         Write-Warning "No executable files found"
@@ -3385,8 +3653,6 @@ $processed = 0
 $changed = 0
 $errors = 0
 
-Write-Host "Searching for .txt files in: $Root" -ForegroundColor Cyan
-
 Get-ChildItem -Path $Root -Filter *.txt -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
     $file = $_.FullName
     try {
@@ -3399,7 +3665,6 @@ Get-ChildItem -Path $Root -Filter *.txt -Recurse -File -ErrorAction SilentlyCont
         # Save only if content changed
         if ($newContent -ne $content) {
             Set-Content -LiteralPath $file -Value $newContent -Encoding UTF8
-            Write-Host "Modified: $file" -ForegroundColor Green
             $changed++
         }
         $processed++
@@ -3409,8 +3674,6 @@ Get-ChildItem -Path $Root -Filter *.txt -Recurse -File -ErrorAction SilentlyCont
         $errors++
     }
 }
-
-Write-Host "Done. Files processed: $processed, modified: $changed, errors: $errors." -ForegroundColor Yellow
 
 # ==================== MANUAL UPDATE NOTICE ====================
 Write-Banner "MANUAL UPDATE REQUIRED" "Yellow"
