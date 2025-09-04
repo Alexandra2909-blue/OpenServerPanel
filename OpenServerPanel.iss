@@ -99,27 +99,34 @@ Name: "{autodesktop}\{#AppTitle}";        Filename: "{app}\bin\ospanel.exe";    
 Name: "core";                          Description: "{cm:CoreData}";         Types: full compact;                 Flags: disablenouninstallwarning
 
 Name: "addons";                        Description: "{cm:SubAddons}";                                             Flags: disablenouninstallwarning
-Name: "addons\blackfire";              Description: "Blackfire 2.28";        Types: full;                         Flags: disablenouninstallwarning
-Name: "addons\db2odbc";                Description: "DB2 ODBC 11.5";         Types: full;                         Flags: disablenouninstallwarning
-Name: "addons\erlang";                 Description: "Erlang/OTP 26.2";       Types: full;                         Flags: disablenouninstallwarning
-Name: "addons\ffmpeg";                 Description: "FFMpeg 7.1";            Types: full;                         Flags: disablenouninstallwarning
-Name: "addons\gs";                     Description: "Ghostscript 10.05";     Types: full compact;                 Flags: disablenouninstallwarning
-Name: "addons\im";                     Description: "ImageMagick";           Types: full compact;                 Flags: disablenouninstallwarning
-Name: "addons\im\im15";                Description: "ImageMagick 7.1 VC15 (PHP 7.2-7.4)"; Types: full;            Flags: disablenouninstallwarning
-Name: "addons\im\im16";                Description: "ImageMagick 7.1 VS16 (PHP 8.0-8.3)"; Types: full compact;    Flags: disablenouninstallwarning
-Name: "addons\im\im17";                Description: "ImageMagick 7.1 VS17 (PHP 8.4)";     Types: full compact;    Flags: disablenouninstallwarning
-Name: "addons\libwebp";                Description: "Libwebp 1.6";           Types: full compact;                 Flags: disablenouninstallwarning
-Name: "addons\mdbtools";               Description: "MongoDB Tools 100.13";  Types: full;                         Flags: disablenouninstallwarning
-Name: "addons\mdbshell";               Description: "MongoDB Shell 2.5";     Types: full;                         Flags: disablenouninstallwarning
-Name: "addons\nvm";                    Description: "NVM 1.1";               Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
-Name: "addons\oic";                    Description: "Oracle Instant Client 23"; Types: full;                      Flags: disablenouninstallwarning
-Name: "addons\perl";                   Description: "Perl 5.32";             Types: full;                         Flags: disablenouninstallwarning
+
+Name: "addons\apache";                 Description: "Дополнения для Apache";
+Name: "addons\apache\perl";            Description: "Perl 5.32";             Types: full;                         Flags: disablenouninstallwarning
+
+Name: "addons\php";                    Description: "Дополнения для PHP";
+Name: "addons\php\blackfire";          Description: "Blackfire 2.28";        Types: full;                         Flags: disablenouninstallwarning
+Name: "addons\php\db2odbc";            Description: "DB2 ODBC 11.5";         Types: full;                         Flags: disablenouninstallwarning
+Name: "addons\php\ffmpeg";             Description: "FFMpeg 7.1";            Types: full;                         Flags: disablenouninstallwarning
+Name: "addons\php\gs";                 Description: "Ghostscript 10.05";     Types: full compact;                 Flags: disablenouninstallwarning
+Name: "addons\php\im15";               Description: "ImageMagick 7.1 VC15 (PHP 7.x)";     Types: full;            Flags: disablenouninstallwarning
+Name: "addons\php\im16";               Description: "ImageMagick 7.1 VS16 (PHP 8.0-8.3)"; Types: full compact;    Flags: disablenouninstallwarning
+Name: "addons\php\im17";               Description: "ImageMagick 7.1 VS17 (PHP 8.4)";     Types: full compact;    Flags: disablenouninstallwarning
+Name: "addons\php\libwebp";            Description: "Libwebp 1.6";                        Types: full compact;    Flags: disablenouninstallwarning
+Name: "addons\php\oic";                Description: "Oracle Instant Client 23";           Types: full;            Flags: disablenouninstallwarning
+
+Name: "addons\erlang";                 Description: "Дополнения для RabbitMQ";
+Name: "addons\erlang\erlang26";        Description: "Erlang/OTP 26.2 (RabbitMQ-3.x)";     Types: full;            Flags: disablenouninstallwarning
+Name: "addons\erlang\erlang27";        Description: "Erlang/OTP 27.3 (RabbitMQ-4.x)";     Types: full;            Flags: disablenouninstallwarning
+
+Name: "addons\mongo";                  Description: "Дополнения для MongoDB";
+Name: "addons\mongo\mdbtools";         Description: "MongoDB Tools 100.13";  Types: full;                         Flags: disablenouninstallwarning
+Name: "addons\mongo\mdbshell";         Description: "MongoDB Shell 2.5";     Types: full;                         Flags: disablenouninstallwarning
+
+Name: "addons\nvms";                   Description: "Менеджер версий Node.js";
+Name: "addons\nvms\nvm";               Description: "NVM 1.1";               Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer       
+
 
 Name: "modules";                       Description: "{cm:SubModules}";                                            Flags: disablenouninstallwarning
-
-Name: "modules\web";                   Description: "Web";                                                        Flags: disablenouninstallwarning
-Name: "modules\web\apache";            Description: "Apache 2.4";            Types: full compact;                 Flags: disablenouninstallwarning
-Name: "modules\web\nginx";             Description: "Nginx 1.29";            Types: full compact;                 Flags: disablenouninstallwarning
 
 Name: "modules\dns";                   Description: "DNS";                                                        Flags: disablenouninstallwarning
 Name: "modules\dns\bind";              Description: "Bind 9.16";             Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
@@ -155,14 +162,14 @@ Name: "modules\mysql\mysql80";         Description: "MySQL 8.0";             Typ
 Name: "modules\mysql\mysql84";         Description: "MySQL 8.4";             Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
 
 Name: "modules\php";                   Description: "PHP";                                                        Flags: disablenouninstallwarning
-Name: "modules\php\php72";             Description: "PHP 7.2";               Types: full;                         Flags: disablenouninstallwarning
-Name: "modules\php\php73";             Description: "PHP 7.3";               Types: full;                         Flags: disablenouninstallwarning
-Name: "modules\php\php74";             Description: "PHP 7.4";               Types: full;                         Flags: disablenouninstallwarning
-Name: "modules\php\php80";             Description: "PHP 8.0";               Types: full;                         Flags: disablenouninstallwarning
-Name: "modules\php\php81";             Description: "PHP 8.1";               Types: full;                         Flags: disablenouninstallwarning
-Name: "modules\php\php82";             Description: "PHP 8.2";               Types: full compact;                 Flags: disablenouninstallwarning
-Name: "modules\php\php83";             Description: "PHP 8.3";               Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
-Name: "modules\php\php84";             Description: "PHP 8.4";               Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
+Name: "modules\php\php72";             Description: "PHP 7.2 VC15 NTS";      Types: full;                         Flags: disablenouninstallwarning
+Name: "modules\php\php73";             Description: "PHP 7.3 VC15 NTS";      Types: full;                         Flags: disablenouninstallwarning
+Name: "modules\php\php74";             Description: "PHP 7.4 VC15 NTS";      Types: full;                         Flags: disablenouninstallwarning
+Name: "modules\php\php80";             Description: "PHP 8.0 VS16 NTS";      Types: full;                         Flags: disablenouninstallwarning
+Name: "modules\php\php81";             Description: "PHP 8.1 VS16 NTS";      Types: full;                         Flags: disablenouninstallwarning
+Name: "modules\php\php82";             Description: "PHP 8.2 VS16 NTS";      Types: full compact;                 Flags: disablenouninstallwarning
+Name: "modules\php\php83";             Description: "PHP 8.3 VS16 NTS";      Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
+Name: "modules\php\php84";             Description: "PHP 8.4 VS17 NTS";      Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
 
 Name: "modules\psql";                  Description: "PostgreSQL";                                                 Flags: disablenouninstallwarning
 Name: "modules\psql\postgresql11";     Description: "PostgreSQL 11";         Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
@@ -180,6 +187,10 @@ Name: "modules\rabbitmq\rabbitmq41";   Description: "RabbitMQ 4.1";          Typ
 
 Name: "modules\redis";                 Description: "Redis 8.2";             Types: full compact;                 Flags: disablenouninstallwarning
 
+Name: "modules\web";                   Description: "Web Servers";
+Name: "modules\web\apache";            Description: "Apache 2.4";            Types: full compact;                 Flags: disablenouninstallwarning
+Name: "modules\web\nginx";             Description: "Nginx 1.29";            Types: full compact;                 Flags: disablenouninstallwarning
+
 [Files]
 
 Source: "system\default\menu.dat";      DestName: "menu.dat";     DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
@@ -189,20 +200,21 @@ Source: "bin\*";                                                  DestDir: "{app
 Source: "home\*";                                                 DestDir: "{app}\home";                          Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs uninsneveruninstall confirmoverwrite; Components: core;                 Permissions: users-full
 Source: "system\*";                                               DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: core;                                    Permissions: users-full
 Source: "user\*";                                                 DestDir: "{app}\user";                          Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: core;                                    Permissions: users-full
-Source: "addons\Blackfire\*";                                     DestDir: "{app}\addons\Blackfire";              Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite solidbreak;  Components: addons\blackfire;             Permissions: users-full
-Source: "addons\DB2-ODBC\*";                                      DestDir: "{app}\addons\DB2-ODBC";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\db2odbc;                          Permissions: users-full
-Source: "addons\ErlangOTP\*";                                     DestDir: "{app}\addons\ErlangOTP";              Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\erlang;                           Permissions: users-full
-Source: "addons\FFMpeg\*";                                        DestDir: "{app}\addons\FFMpeg";                 Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\ffmpeg;                           Permissions: users-full
-Source: "addons\Ghostscript\*";                                   DestDir: "{app}\addons\Ghostscript";            Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\gs;                               Permissions: users-full
-Source: "addons\ImageMagick-vc15\*";                              DestDir: "{app}\addons\ImageMagick-vc15";       Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\im\im15;                          Permissions: users-full
-Source: "addons\ImageMagick-vs16\*";                              DestDir: "{app}\addons\ImageMagick-vs16";       Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\im\im16;                          Permissions: users-full
-Source: "addons\ImageMagick-vs17\*";                              DestDir: "{app}\addons\ImageMagick-vs17";       Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\im\im17;                          Permissions: users-full
-Source: "addons\InstantClient\*";                                 DestDir: "{app}\addons\InstantClient";          Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\oic;                              Permissions: users-full
-Source: "addons\Libwebp\*";                                       DestDir: "{app}\addons\Libwebp";                Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\libwebp;                          Permissions: users-full
-Source: "addons\MDBTools\*";                                      DestDir: "{app}\addons\MDBTools";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\mdbtools;                         Permissions: users-full
-Source: "addons\MongoShell\*";                                    DestDir: "{app}\addons\MongoShell";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\mdbshell;                         Permissions: users-full
-Source: "addons\NVM\*";                                           DestDir: "{app}\addons\NVM";                    Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\nvm;                              Permissions: users-full
-Source: "addons\Perl\*";                                          DestDir: "{app}\addons\Perl";                   Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\perl;                             Permissions: users-full
+Source: "addons\Blackfire\*";                                     DestDir: "{app}\addons\Blackfire";              Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite solidbreak;  Components: addons\php\blackfire;         Permissions: users-full
+Source: "addons\DB2-ODBC\*";                                      DestDir: "{app}\addons\DB2-ODBC";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\db2odbc;                      Permissions: users-full
+Source: "addons\FFMpeg\*";                                        DestDir: "{app}\addons\FFMpeg";                 Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\ffmpeg;                       Permissions: users-full
+Source: "addons\Ghostscript\*";                                   DestDir: "{app}\addons\Ghostscript";            Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\gs;                           Permissions: users-full
+Source: "addons\ImageMagick-vc15\*";                              DestDir: "{app}\addons\ImageMagick-vc15";       Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\im15;                         Permissions: users-full
+Source: "addons\ImageMagick-vs16\*";                              DestDir: "{app}\addons\ImageMagick-vs16";       Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\im16;                         Permissions: users-full
+Source: "addons\ImageMagick-vs17\*";                              DestDir: "{app}\addons\ImageMagick-vs17";       Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\im17;                         Permissions: users-full
+Source: "addons\InstantClient\*";                                 DestDir: "{app}\addons\InstantClient";          Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\oic;                          Permissions: users-full
+Source: "addons\Libwebp\*";                                       DestDir: "{app}\addons\Libwebp";                Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\libwebp;                      Permissions: users-full
+Source: "addons\MDBTools\*";                                      DestDir: "{app}\addons\MDBTools";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\mongo\mdbtools;                   Permissions: users-full
+Source: "addons\MongoShell\*";                                    DestDir: "{app}\addons\MongoShell";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\mongo\mdbshell;                   Permissions: users-full
+Source: "addons\NVM\*";                                           DestDir: "{app}\addons\NVM";                    Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\nvms\nvm;                         Permissions: users-full
+Source: "addons\Perl\*";                                          DestDir: "{app}\addons\Perl";                   Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\apache\perl;                      Permissions: users-full
+Source: "addons\ErlangOTP-26\*";                                  DestDir: "{app}\addons\ErlangOTP-26";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\erlang\erlang26;                  Permissions: users-full
+Source: "addons\ErlangOTP-27\*";                                  DestDir: "{app}\addons\ErlangOTP-27";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\erlang\erlang27;                  Permissions: users-full
 
 Source: "modules\PHP-7.2\*";                                      DestDir: "{app}\modules\PHP-7.2";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite solidbreak;  Components: modules\php\php72;            Permissions: users-full
 Source: "modules\PHP-7.3\*";                                      DestDir: "{app}\modules\PHP-7.3";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php73;                       Permissions: users-full
@@ -212,24 +224,6 @@ Source: "modules\PHP-8.1\*";                                      DestDir: "{app
 Source: "modules\PHP-8.2\*";                                      DestDir: "{app}\modules\PHP-8.2";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php82;                       Permissions: users-full
 Source: "modules\PHP-8.3\*";                                      DestDir: "{app}\modules\PHP-8.3";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php83;                       Permissions: users-full
 Source: "modules\PHP-8.4\*";                                      DestDir: "{app}\modules\PHP-8.4";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php84;                       Permissions: users-full
-
-Source: "resources\php_data\*";                                   DestDir: "{app}\modules\PHP-7.2\PHP";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php72;                       Permissions: users-full
-Source: "resources\php_data\*";                                   DestDir: "{app}\modules\PHP-7.3\PHP";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php73;                       Permissions: users-full
-Source: "resources\php_data\*";                                   DestDir: "{app}\modules\PHP-7.4\PHP";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php74;                       Permissions: users-full
-Source: "resources\php_data\*";                                   DestDir: "{app}\modules\PHP-8.0\PHP";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php80;                       Permissions: users-full
-Source: "resources\php_data\*";                                   DestDir: "{app}\modules\PHP-8.1\PHP";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php81;                       Permissions: users-full
-Source: "resources\php_data\*";                                   DestDir: "{app}\modules\PHP-8.2\PHP";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php82;                       Permissions: users-full
-Source: "resources\php_data\*";                                   DestDir: "{app}\modules\PHP-8.3\PHP";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php83;                       Permissions: users-full
-Source: "resources\php_data\*";                                   DestDir: "{app}\modules\PHP-8.4\PHP";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php84;                       Permissions: users-full
-
-Source: "resources\php_bundle\PHP-7.2\*";                         DestDir: "{app}\modules\PHP-7.2";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php72;                       Permissions: users-full
-Source: "resources\php_bundle\PHP-7.3\*";                         DestDir: "{app}\modules\PHP-7.3";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php73;                       Permissions: users-full
-Source: "resources\php_bundle\PHP-7.4\*";                         DestDir: "{app}\modules\PHP-7.4";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php74;                       Permissions: users-full
-Source: "resources\php_bundle\PHP-8.0\*";                         DestDir: "{app}\modules\PHP-8.0";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php80;                       Permissions: users-full
-Source: "resources\php_bundle\PHP-8.1\*";                         DestDir: "{app}\modules\PHP-8.1";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php81;                       Permissions: users-full
-Source: "resources\php_bundle\PHP-8.2\*";                         DestDir: "{app}\modules\PHP-8.2";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php82;                       Permissions: users-full
-Source: "resources\php_bundle\PHP-8.3\*";                         DestDir: "{app}\modules\PHP-8.3";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php83;                       Permissions: users-full
-Source: "resources\php_bundle\PHP-8.4\*";                         DestDir: "{app}\modules\PHP-8.4";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\php\php84;                       Permissions: users-full
 
 Source: "modules\MySQL-5.6\*";                                    DestDir: "{app}\modules\MySQL-5.6";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite solidbreak;  Components: modules\mysql\mysql56;        Permissions: users-full
 Source: "modules\MySQL-5.7\*";                                    DestDir: "{app}\modules\MySQL-5.7";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\mysql\mysql57;                   Permissions: users-full
