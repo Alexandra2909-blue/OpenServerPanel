@@ -2,11 +2,11 @@ Usage: rotatelogs.exe [-vlfDtTe] [-L linkname] [-p prog] [-n number] <logfile> {
 
 Add this:
 
-TransferLog "|C:\Portable\Documents\Git\OSPanel\modules\Apache\bin\rotatelogs.exe /some/where 86400"
+TransferLog "|rotatelogs.exe /some/where 86400"
 
 or 
 
-TransferLog "|C:\Portable\Documents\Git\OSPanel\modules\Apache\bin\rotatelogs.exe /some/where 5M"
+TransferLog "|rotatelogs.exe /some/where 5M"
 
 to httpd.conf. By default, the generated name will be
 <logfile>.nnnn where nnnn is the system time at which the log

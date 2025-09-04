@@ -3,7 +3,7 @@ wintty: a utility for echoing the stdin stream to a new console window,
         Also reflects the console input back to the stdout stream, allowing
         the operator to respond to prompts from the context of a service.
 
-Syntax: C:\Portable\Documents\Git\OSPanel\modules\Apache\bin\wintty.exe [opts] [-t "Window Title"]
+Syntax: wintty [opts] [-t "Window Title"]
 
   opts: -c{haracter}   or -l{ine} input
         -q{uiet}       or -e{cho} input

@@ -704,6 +704,8 @@
             {
                 "English": "https://httpd.apache.org/docs/2.4/"
             },
+            "DownloadUrl": "https://www.apachelounge.com/download/VS17/binaries/httpd-2.4.65-250724-Win64-VS17.zip",
+            "ZipPath": "module.zip",
             "main":
             {
                 "architecture": "x64",
@@ -722,8 +724,11 @@
         {
             "docs":
             {
-                "English": "https://bind9.readthedocs.io/en/v9_16/"
+                "English": "https://bind9.readthedocs.io/en/v9.16.50/"
             },
+            "DownloadUrl": "https://ftp.ripe.net/mirrors/sites/ftp.isc.org/isc/bind/9.17.15/BIND9.17.15.x64.zip",
+            "ZipPath": "module.zip",
+            "help": "-h",
             "main":
             {
                 "architecture": "x64",
@@ -735,7 +740,7 @@
                 "license_type": "MPL License 2.0",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "9.16.32"
+                "version": "9.17.15"
             }
         },
         "Mailpit":
@@ -744,6 +749,9 @@
             {
                 "English": "https://mailpit.axllent.org/docs/"
             },
+            "DownloadUrl": "https://github.com/axllent/mailpit/releases/download/v1.27.7/mailpit-windows-amd64.zip",
+            "ZipPath": "module.zip",
+            "help": "-h",
             "main":
             {
                 "architecture": "x64",
@@ -764,6 +772,9 @@
             {
                 "English": "https://mariadb.com/kb/en/documentation/"
             },
+            "DownloadUrl": "https://archive.mariadb.org/mariadb-10.11.14/winx64-packages/mariadb-10.11.14-winx64.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -783,6 +794,9 @@
             {
                 "English": "https://mariadb.com/kb/en/documentation/"
             },
+            "DownloadUrl": "https://archive.mariadb.org/mariadb-10.4.34/winx64-packages/mariadb-10.4.34-winx64.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -793,7 +807,7 @@
                 "license_type": "GNU GPLv2",
                 "min_windows_ver": "6.1.7601",
                 "timestamp": "1651770000",
-                "version": "10.4.32"
+                "version": "10.4.34"
             }
         },
         "MariaDB-10.5":
@@ -802,6 +816,9 @@
             {
                 "English": "https://mariadb.com/kb/en/documentation/"
             },
+            "DownloadUrl": "https://archive.mariadb.org/mariadb-10.5.29/winx64-packages/mariadb-10.5.29-winx64.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -812,7 +829,7 @@
                 "license_type": "GNU GPLv2",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "10.5.28"
+                "version": "10.5.29"
             }
         },
         "MariaDB-10.6":
@@ -821,6 +838,9 @@
             {
                 "English": "https://mariadb.com/kb/en/documentation/"
             },
+            "DownloadUrl": "https://archive.mariadb.org/mariadb-10.6.23/winx64-packages/mariadb-10.6.23-winx64.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -840,6 +860,9 @@
             {
                 "English": "https://mariadb.com/kb/en/documentation/"
             },
+            "DownloadUrl": "https://archive.mariadb.org/mariadb-11.4.8/winx64-packages/mariadb-11.4.8-winx64.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -859,6 +882,9 @@
             {
                 "English": "https://mariadb.com/kb/en/documentation/"
             },
+            "DownloadUrl": "https://archive.mariadb.org/mariadb-11.8.3/winx64-packages/mariadb-11.8.3-winx64.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -878,6 +904,9 @@
             {
                 "English": "https://github.com/memcached/memcached/wiki"
             },
+            "DownloadUrl": "https://github.com/jefyt/memcached-windows/releases/download/1.6.8_mingw/memcached-1.6.8-win64-mingw.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -897,6 +926,9 @@
             {
                 "English": "https://docs.mongodb.com/v4.0/"
             },
+            "DownloadUrl": "https://github.com/OSPanel/OpenServerPanel/raw/refs/heads/main/resources/dist/MongoDB-4.0.zip",
+            "ZipPath": "addon.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -916,6 +948,9 @@
             {
                 "English": "https://docs.mongodb.com/v4.2/"
             },
+            "DownloadUrl": "https://github.com/OSPanel/OpenServerPanel/raw/refs/heads/main/resources/dist/MongoDB-4.2.zip",
+            "ZipPath": "addon.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -935,6 +970,9 @@
             {
                 "English": "https://docs.mongodb.com/v4.4/"
             },
+            "DownloadUrl": "https://github.com/OSPanel/OpenServerPanel/raw/refs/heads/main/resources/dist/MongoDB-4.4.zip",
+            "ZipPath": "addon.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -954,6 +992,9 @@
             {
                 "English": "https://docs.mongodb.com/v5.0/"
             },
+            "DownloadUrl": "https://github.com/OSPanel/OpenServerPanel/raw/refs/heads/main/resources/dist/MongoDB-5.0.zip",
+            "ZipPath": "addon.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -973,6 +1014,9 @@
             {
                 "English": "https://docs.mongodb.com/v6.0/"
             },
+            "DownloadUrl": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-6.0.26.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -992,6 +1036,9 @@
             {
                 "English": "https://docs.mongodb.com/v7.0/"
             },
+            "DownloadUrl": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-7.0.23.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
@@ -1011,6 +1058,9 @@
             {
                 "English": "https://docs.mongodb.com/v8.0/"
             },
+            "DownloadUrl": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.0.13.zip",
+            "ZipPath": "module.zip",
+            "help": "--help",
             "main":
             {
                 "architecture": "x64",
