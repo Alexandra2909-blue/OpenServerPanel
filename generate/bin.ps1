@@ -38,6 +38,14 @@ $script:TotalTools = 0
 $script:ProcessedTools = 0
 $script:SkippedTools = 0
 $script:FailedTools = 0
+
+# Variables for tracking execution stages
+$script:CurrentMainStep = 0
+$script:TotalMainSteps = 11
+$script:CurrentAddonSubStep = 0
+$script:TotalAddonSubSteps = 6
+$script:CurrentToolSubStep = 0
+$script:TotalToolSubSteps = 3
 # ===========================================================
 
 # ================== UTILITY FUNCTIONS ==================
@@ -53,22 +61,20 @@ function Write-Banner {
 function Write-Progress {
     param([string]$AddonName, [string]$Step, [string]$Details = "")
     
-    $prefix = "[$script:ProcessedAddons/$script:TotalAddons]"
+    $mainStepInfo = "[$($script:CurrentMainStep)/$($script:TotalMainSteps)]"
     $status = if ($Details) { "$Step - $Details" } else { $Step }
-    
-    Write-Host "$prefix " -ForegroundColor Yellow -NoNewline
+        
     Write-Host "$AddonName" -ForegroundColor White -NoNewline
     Write-Host " → $status" -ForegroundColor Green
 }
 
-function Write-ToolProgress {
-    param([string]$ToolName, [string]$Step, [string]$Details = "")
+function Write-PhpProgress {
+    param([string]$ComponentName, [string]$Step, [string]$Details = "")
     
-    $prefix = "[$script:ProcessedTools/$script:TotalTools]"
+    $mainStepInfo = "[$($script:CurrentMainStep)/$($script:TotalMainSteps)]"
     $status = if ($Details) { "$Step - $Details" } else { $Step }
     
-    Write-Host "$prefix " -ForegroundColor Yellow -NoNewline
-    Write-Host "$ToolName" -ForegroundColor White -NoNewline
+    Write-Host "$ComponentName" -ForegroundColor White -NoNewline
     Write-Host " → $status" -ForegroundColor Green
 }
 
@@ -219,7 +225,7 @@ function Get-ToolsList {
     #>
     
     try {
-        Write-ToolProgress "SYSTEM" "Loading utilities configuration"
+        Write-Progress "SYSTEM" "Loading utilities configuration"
         
         $binMatrix = Get-Content $BinMatrixPath -Raw | ConvertFrom-Json
         $tools = $binMatrix.tools
@@ -768,7 +774,6 @@ function Remove-UnnecessaryFiles {
     Removes unnecessary files and directories from addons
     #>
     
-    Write-Banner "CLEANING UNNECESSARY FILES" "Magenta"
     Write-Host ""
     # Patterns for excluded directories
     $excludePatterns = @("ErlangOTP*", "Ghostscript*")
@@ -784,7 +789,7 @@ function Remove-UnnecessaryFiles {
         
             Get-ChildItem -Path $excludedDir.FullName -Filter "*vc_redist.exe" -ErrorAction SilentlyContinue |
                 ForEach-Object {
-                    Remove-Item $_.FullName -Force
+                    Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
                     Write-Success "Removed file: $($_.Name)"
                 }
 
@@ -795,12 +800,12 @@ function Remove-UnnecessaryFiles {
                 $includePath = Join-Path $_.FullName "include"
                 
                 if (Test-Path $libPath) {
-                    Remove-Item $libPath -Recurse -Force
+                    Remove-Item $libPath -Recurse -Force -ErrorAction SilentlyContinue
                     Write-Success "Removed: $libPath"
                 }
                 
                 if (Test-Path $includePath) {
-                    Remove-Item $includePath -Recurse -Force
+                    Remove-Item $includePath -Recurse -Force -ErrorAction SilentlyContinue
                     Write-Success "Removed: $includePath"
                 }
             }
@@ -811,14 +816,14 @@ function Remove-UnnecessaryFiles {
             # Remove *.lib files
             Get-ChildItem -Path $usrLibPath -Filter "*.lib" -ErrorAction SilentlyContinue |
                 ForEach-Object {
-                    Remove-Item $_.FullName -Force
+                    Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
                     Write-Success "Removed file: $($_.Name)"
                 }
             
             # Remove include folder
             $usrLibIncludePath = Join-Path $usrLibPath "include"
             if (Test-Path $usrLibIncludePath) {
-                Remove-Item $usrLibIncludePath -Recurse -Force
+                Remove-Item $usrLibIncludePath -Recurse -Force -ErrorAction SilentlyContinue
                 Write-Success "Removed: $usrLibIncludePath"
             }
         }
@@ -832,12 +837,12 @@ function Remove-UnnecessaryFiles {
                     $erlInterfaceLibPath = Join-Path $_.FullName "lib"
                     
                     if (Test-Path $erlInterfaceIncludePath) {
-                        Remove-Item $erlInterfaceIncludePath -Recurse -Force
+                        Remove-Item $erlInterfaceIncludePath -Recurse -Force -ErrorAction SilentlyContinue
                         Write-Success "Removed: $erlInterfaceIncludePath"
                     }
                     
                     if (Test-Path $erlInterfaceLibPath) {
-                        Remove-Item $erlInterfaceLibPath -Recurse -Force
+                        Remove-Item $erlInterfaceLibPath -Recurse -Force -ErrorAction SilentlyContinue
                         Write-Success "Removed: $erlInterfaceLibPath"
                     }
                 }
@@ -868,7 +873,7 @@ function Remove-UnnecessaryFiles {
             @("include", "headers", "lib") | ForEach-Object {
                 $targetPath = Join-Path $addonPath $_
                 if (Test-Path $targetPath) {
-                    Remove-Item $targetPath -Recurse -Force
+                    Remove-Item $targetPath -Recurse -Force -ErrorAction SilentlyContinue
                     Write-Success "Removed directory: $_"
                 }
             }
@@ -876,11 +881,11 @@ function Remove-UnnecessaryFiles {
             # Remove unnecessary files
             $filesRemoved = 0
             @("*.pdb", "db2level.txt", "uidrvci.txt", "odbc_install.txt", "adrci.txt", "vc_redist.exe", "install.cmd") | ForEach-Object {
-                Get-ChildItem -Path $addonPath -Filter $_ -Recurse -ErrorAction SilentlyContinue | 
-                    ForEach-Object { 
-                        Remove-Item $_.FullName -Force
-                        $filesRemoved++
-                    }
+                $filesToRemove = Get-ChildItem -Path $addonPath -Filter $_ -Recurse -ErrorAction SilentlyContinue
+                foreach ($file in $filesToRemove) {
+                    Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
+                    $filesRemoved++
+                }
             }
             
             if ($filesRemoved -gt 0) {
@@ -896,7 +901,7 @@ function Remove-UnnecessaryFiles {
     
     if ($emptyHelpFiles) {
         $emptyHelpFiles | ForEach-Object {
-            Remove-Item $_.FullName -Force
+            Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
         }
         Write-Success "Removed $($emptyHelpFiles.Count) empty help files"
     }
@@ -956,7 +961,7 @@ function Install-ToolFromArchive {
     $tmp = "$env:TEMP\tmpdir_$(Get-Random)"
     $zip = "$tmp.zip"
     
-    Write-ToolProgress "DOWNLOAD" "Downloading archive" $Url
+    Write-Progress "DOWNLOAD" "Downloading archive" $Url
     
     if ($UseProxy) {
         & curl --socks5 $ProxyUrl -L -o $zip $Url 2>$null
@@ -1003,7 +1008,7 @@ function Install-ToolFromArchive {
         }
         
         if ($sourceFile -and (Test-Path $sourceFile -PathType Leaf)) {
-            Write-ToolProgress "COPYING" "File $file"
+            Write-Progress "COPYING" "File $file"
             Copy-Item $sourceFile "$BaseBinDir\$file" -Force
             Write-Success "Copied: $sourceFile → $BaseBinDir\$file"
         }
@@ -1016,7 +1021,7 @@ function Install-ToolFromArchive {
     foreach ($copyFile in $CopyFiles) {
         if (Test-Path $copyFile -PathType Leaf) {
             $fileName = Split-Path $copyFile -Leaf
-            Write-ToolProgress "COPYING" "Additional file $fileName"
+            Write-Progress "COPYING" "Additional file $fileName"
             Copy-Item $copyFile "$BaseBinDir\$fileName" -Force
             Write-Success "Copied additional file: $copyFile"
         }
@@ -1041,7 +1046,7 @@ function Install-DirectDownload {
         [string]$TargetName
     )
     
-    Write-ToolProgress "DOWNLOAD" "Direct downloading" $Url
+    Write-Progress "DOWNLOAD" "Direct downloading" $Url
     
     if ($UseProxy) {
         & curl --socks5 $ProxyUrl -L -o "$BaseBinDir\$TargetName" $Url 2>$null
@@ -1070,7 +1075,7 @@ function Install-FromLocalArchive {
     
     $tmp = "$env:TEMP\tmpdir_$(Get-Random)"
     
-    Write-ToolProgress "EXTRACTION" "Local archive" $LocalZip
+    Write-Progress "EXTRACTION" "Local archive" $LocalZip
     Expand-Archive $LocalZip $tmp -Force
     
     foreach ($file in $Files) {
@@ -1079,7 +1084,7 @@ function Install-FromLocalArchive {
                      Select-Object -First 1
         
         if ($sourceFile) {
-            Write-ToolProgress "COPYING" "File $file"
+            Write-Progress "COPYING" "File $file"
             Copy-Item $sourceFile.FullName "$BaseBinDir\$file" -Force
             Write-Success "Copied: $($sourceFile.FullName) → $BaseBinDir\$file"
         }
@@ -1106,7 +1111,7 @@ function Install-LocalFiles {
     foreach ($file in $LocalFiles) {
         if (Test-Path $file -PathType Leaf) {
             $fileName = Split-Path $file -Leaf
-            Write-ToolProgress "COPYING" "Local file $fileName"
+            Write-Progress "COPYING" "Local file $fileName"
             Copy-Item $file "$BaseBinDir\$fileName" -Force
             Write-Success "Copied local file: $file → $BaseBinDir\$fileName"
         }
@@ -1144,7 +1149,7 @@ function Generate-ToolHelp {
         return
     }
     
-    Write-ToolProgress "HELP" "Generating help for $($Command[0])"
+    Write-Progress "HELP" "Generating help for $($Command[0])"
     
     try {
         $out = & $execPath $Command[1..($Command.Length-1)] 2>&1 | Where-Object {$_.ToString().Trim()}
@@ -1177,10 +1182,9 @@ function Copy-ComposerFiles {
     Downloads and copies Composer files and keys to PHP modules
     #>
     
-    Write-Banner "COPYING COMPOSER FILES" "Magenta"
     Write-Host ""
     
-    Write-Progress "COMPOSER" "Downloading Composer and keys"
+    Write-PhpProgress "COMPOSER" "Downloading Composer and keys"
     
     # Define source files
     $sources = @{
@@ -1221,7 +1225,7 @@ function Copy-ComposerFiles {
     
     foreach ($url in $downloads.Keys) {
         $destPath = $downloads[$url]
-        Write-Progress "COMPOSER" "Downloading $(Split-Path $destPath -Leaf)" $url
+        Write-PhpProgress "COMPOSER" "Downloading $(Split-Path $destPath -Leaf)" $url
         
         try {
             if ($UseProxy) {
@@ -1268,7 +1272,7 @@ function Copy-ComposerFiles {
         $composerTargetDir = "$phpModuleDir\ospanel_data\default_data\composer"
         
         if (Test-Path $phpModuleDir) {
-            Write-Progress "COMPOSER" "Copying files to PHP $version"
+            Write-PhpProgress "COMPOSER" "Copying files to PHP $version"
             
             # Copy files to composer subfolder
             if (Test-Path $composerTargetDir) {
@@ -1324,8 +1328,6 @@ function Copy-PhpMibFiles {
     Downloads and copies SNMP MIB files to PHP modules
     #>
     
-    Write-Banner "COPYING PHP MIB FILES" "Magenta"
-    
     # Define MIB archives for different PHP versions
     $mibArchives = @{
         "7.2" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
@@ -1348,9 +1350,9 @@ function Copy-PhpMibFiles {
         $mibsDir = Join-Path $extrasDir "mibs"
         
         Write-Host ""
-        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         Write-Host " PHP-$version MIB FILES" -ForegroundColor Cyan
-        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         Write-Host ""
         
         # Check if PHP module exists
@@ -1363,13 +1365,13 @@ function Copy-PhpMibFiles {
         $archiveUrl = $mibArchives[$version]
         
         try {
-            Write-Progress "MIB-PHP-$version" "Processing MIB files for PHP $version"
+            Write-PhpProgress "MIB-PHP-$version" "Processing MIB files for PHP $version"
             
             # Create temporary directory
             $tmpDir = "$env:TEMP\mib_$(Get-Random)"
             $zipPath = "$tmpDir.zip"
             
-            Write-Progress "MIB-PHP-$version" "Downloading archive" $archiveUrl
+            Write-PhpProgress "MIB-PHP-$version" "Downloading archive" $archiveUrl
             
             # Download archive
             if ($UseProxy) {
@@ -1388,7 +1390,7 @@ function Copy-PhpMibFiles {
             Write-Success "Archive downloaded successfully ($fileSize MB)"
             
             # Extract archive
-            Write-Progress "MIB-PHP-$version" "Extracting archive to temporary directory"
+            Write-PhpProgress "MIB-PHP-$version" "Extracting archive to temporary directory"
             Expand-Archive -Path $zipPath -DestinationPath $tmpDir -Force
             
             # Find mibs subdirectory in extracted content
@@ -1403,7 +1405,7 @@ function Copy-PhpMibFiles {
                 continue
             }
             
-            Write-Progress "MIB-PHP-$version" "Found MIB directory: $($mibsSourceDir.FullName)"
+            Write-PhpProgress "MIB-PHP-$version" "Found MIB directory: $($mibsSourceDir.FullName)"
             
             # Create extras directory if it doesn't exist
             if (-not (Test-Path $extrasDir)) {
@@ -1418,7 +1420,7 @@ function Copy-PhpMibFiles {
             }
             
             # Copy mibs directory to PHP module extras
-            Write-Progress "MIB-PHP-$version" "Copying MIB files to PHP module"
+            Write-PhpProgress "MIB-PHP-$version" "Copying MIB files to PHP module"
             Copy-Item -Path $mibsSourceDir.FullName -Destination $extrasDir -Recurse -Force
             
             # Count copied files
@@ -1469,9 +1471,6 @@ function Copy-PhpBlackfireFiles {
     Downloads and copies Blackfire extension files to PHP modules
     #>
     
-    Write-Banner "COPYING PHP BLACKFIRE FILES" "Magenta"
-    Write-Host ""
-    
     # Define Blackfire archives for different PHP versions
     $blackfireArchives = @{
         "7.2" = "https://blackfire.io/api/v1/releases/probe/php/windows/amd64/72"
@@ -1494,9 +1493,9 @@ function Copy-PhpBlackfireFiles {
         $targetFile = Join-Path $extDir "php_blackfire.dll"
         
         Write-Host ""
-        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         Write-Host " PHP-$version BLACKFIRE EXTENSION" -ForegroundColor Cyan
-        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         Write-Host ""
         
         # Check if PHP module exists
@@ -1618,16 +1617,12 @@ function Copy-PhpIoncubeFiles {
     .SYNOPSIS
     Downloads and copies Ioncube loader files to PHP modules
     #>
-    
-    Write-Banner "COPYING PHP IONCUBE FILES" "Magenta"
-    Write-Host ""
-    
+       
     # Define Ioncube archives for different PHP versions
     $ioncubeArchives = @{
         "7.2" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc15_x86-64.zip"
         "7.3" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc15_x86-64.zip"
         "7.4" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc15_x86-64.zip"
-        "8.0" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc16_x86-64.zip"
         "8.1" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc16_x86-64.zip"
         "8.2" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc16_x86-64.zip"
         "8.3" = "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_win_nonts_vc16_x86-64.zip"
@@ -1645,9 +1640,9 @@ function Copy-PhpIoncubeFiles {
         $targetLoaderFile = Join-Path $extDir "php_ioncube.dll"
         
         Write-Host ""
-        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         Write-Host " PHP-$version IONCUBE LOADER" -ForegroundColor Cyan
-        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         Write-Host ""
         
         # Check if PHP module exists
@@ -1689,7 +1684,7 @@ function Copy-PhpIoncubeFiles {
             Expand-Archive -Path $zipPath -DestinationPath $tmpDir -Force
             
             # Find specific loader file for this PHP version
-            $loaderFileName = "ioncube_loader_win_$($version -replace '\.', '').dll"
+            $loaderFileName = "ioncube_loader_win_$version.dll"
             $loaderFile = Get-ChildItem -Path $tmpDir -File -Recurse | 
                          Where-Object { $_.Name -eq $loaderFileName } | 
                          Select-Object -First 1
@@ -1808,13 +1803,9 @@ function Copy-PhpFirebirdFiles {
     .SYNOPSIS
     Downloads and copies Firebird client files to PHP modules
     #>
-    
-    Write-Banner "COPYING PHP FIREBIRD FILES" "Magenta"
-    Write-Host ""
-    
+        
     # Define Firebird archives for different PHP versions
     $firebirdArchives = @{
-        "7.2" = "https://github.com/FirebirdSQL/firebird/releases/download/v3.0.13/Firebird-3.0.13.33818-0-x64.zip"
         "7.3" = "https://github.com/FirebirdSQL/firebird/releases/download/v3.0.13/Firebird-3.0.13.33818-0-x64.zip"
         "7.4" = "https://github.com/FirebirdSQL/firebird/releases/download/v3.0.13/Firebird-3.0.13.33818-0-x64.zip"
         "8.0" = "https://github.com/FirebirdSQL/firebird/releases/download/v4.0.6/Firebird-4.0.6.3221-0-x64.zip"
@@ -1833,9 +1824,9 @@ function Copy-PhpFirebirdFiles {
         $targetFile = Join-Path $phpModuleDir "fbclient.dll"
         
         Write-Host ""
-        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         Write-Host " PHP-$version FIREBIRD CLIENT" -ForegroundColor Cyan
-        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         Write-Host ""
         
         $archiveUrl = $firebirdArchives[$version]
@@ -1951,13 +1942,13 @@ function Copy-AdditionalFiles {
     Downloads and copies additional system files
     #>
     
-    Write-Banner "COPYING ADDITIONAL FILES" "Magenta"
     Write-Host ""
     
     # Download files with guaranteed overwrite
     $downloads = @{
         "https://curl.se/ca/cacert.pem" = @(
             "..\system\ssl\cacert.pem",
+            "..\system\bin\curl-ca-bundle.crt",
             "..\bin\curl-ca-bundle.crt",
             "..\addons\Perl\perl\vendor\lib\Mozilla\CA\cacert.pem"
         )
@@ -1965,7 +1956,7 @@ function Copy-AdditionalFiles {
     
     foreach ($url in $downloads.Keys) {
         foreach ($destPath in $downloads[$url]) {
-            Write-Progress "ADDITIONAL" "Downloading $(Split-Path $destPath -Leaf)" $url
+            Write-PhpProgress "ADDITIONAL" "Downloading $(Split-Path $destPath -Leaf)" $url
             
             # Ensure directory exists
             Ensure-Directory $destPath
@@ -2008,7 +1999,7 @@ function Copy-AdditionalFiles {
         $destPath = $localCopies[$sourcePath]
         
         if (Test-Path $sourcePath) {
-            Write-Progress "ADDITIONAL" "Copying local file $(Split-Path $sourcePath -Leaf)"
+            Write-PhpProgress "ADDITIONAL" "Copying local file $(Split-Path $sourcePath -Leaf)"
             
             # Ensure directory exists
             Ensure-Directory $destPath
@@ -2035,7 +2026,6 @@ function Show-Summary {
     Displays final execution statistics
     #>
     
-    Write-Banner "FINAL STATISTICS" "Green"
     Write-Host ""
     Write-Host "📊 Addon processing results:" -ForegroundColor White
     Write-Host ""
@@ -2086,14 +2076,20 @@ foreach ($folder in $folders) {
     }
 }
 
-# Check prerequisites
+# STEP 1: Prerequisites Check
+$script:CurrentMainStep = 1
+
+Write-Host ""
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): PREREQUISITES CHECK" "Cyan"
+
+Write-Host ""
+
 if (-not (Test-Prerequisites)) {
     exit 1
 }
 
-# ==================== ADDON PROCESSING ====================
-
-# Load addon configuration
+# STEP 2: Addon Processing
+$script:CurrentMainStep = 2
 $config = Get-AddonsList
 if (-not $config) {
     Write-Error "Failed to load addon configuration"
@@ -2103,16 +2099,16 @@ if (-not $config) {
 $infodata = $config.InfoData
 $addons = $config.Addons
 Write-Host ""
-Write-Banner "PROCESSING ADDONS" "Yellow"
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): PROCESSING ADDONS" "Yellow"
 
 # Main addon processing loop
 foreach ($AddonName in $addons) {
     $script:ProcessedAddons++
     
     Write-Host ""
-    Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+    Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host " ADDON: $AddonName [$script:ProcessedAddons/$script:TotalAddons]" -ForegroundColor Cyan
-    Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+    Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host ""
     
     $addon = $infodata.addons.$AddonName
@@ -2139,56 +2135,67 @@ foreach ($AddonName in $addons) {
     try {
         # Special processing for InstantClient
         if ($AddonName -eq "InstantClient") {
-            # For InstantClient don't download single file, process directly
+            # 2.1-2.2: Download & Extract (combined for InstantClient)
+            $script:CurrentAddonSubStep = 1
             if (-not (Extract-Addon -AddonName $AddonName -ZipPath "" -DestDir $DestDir -DownloadUrl $addon.DownloadUrl)) {
                 $script:FailedAddons++
                 continue
             }
         } else {
-            # 1. Download addon (for regular addons)
+            # 2.1: Download addon
+            $script:CurrentAddonSubStep = 1
             if (-not (Download-Addon -DownloadUrl $addon.DownloadUrl -ZipPath $ZipPath)) {
                 $script:FailedAddons++
                 continue
             }
 
-            # 2. Extract archive
+            # 2.2: Extract archive
+            $script:CurrentAddonSubStep = 2
             if (-not (Extract-Addon -AddonName $AddonName -ZipPath $ZipPath -DestDir $DestDir)) {
                 $script:FailedAddons++
                 continue
             }
         }
 
-        # 3. Generate help files
+        # 2.3: Generate help files
+        $script:CurrentAddonSubStep = 3
         Generate-HelpFiles -AddonName $AddonName -DestDir $DestDir -Addon $addon
 
-        # 4. Create addon.ini
+        # 2.4: Create addon.ini
+        $script:CurrentAddonSubStep = 4
         Generate-IniFile -DestDir $DestDir -Addon $addon
 
-        # 5. Copy additional files
+        # 2.5: Copy additional files
+        $script:CurrentAddonSubStep = 5
         Copy-BundleFiles -AddonName $AddonName -DestDir $DestDir
 
+        # 2.6: Success
+        $script:CurrentAddonSubStep = 6
         Write-Success "Addon '$AddonName' successfully processed"
+        $script:CurrentAddonSubStep = 0
     }
     catch {
         Write-Error "Critical error processing '$AddonName': $_"
         $script:FailedAddons++
+        $script:CurrentAddonSubStep = 0
     }
 }
 
-# Final addon cleanup
+# STEP 3: Cleanup
+$script:CurrentMainStep = 3
 Write-Host ""
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): CLEANING UNNECESSARY FILES" "Magenta"
 Remove-UnnecessaryFiles
 
-# ==================== UTILITY PROCESSING ====================
-
-# Load utility configuration
+# STEP 4: Utility Processing
+$script:CurrentMainStep = 4
 $binMatrix = Get-ToolsList
 if (-not $binMatrix) {
     Write-Error "Failed to load utility configuration"
     exit 1
 }
 Write-Host ""
-Write-Banner "INSTALLING SYSTEM UTILITIES" "Yellow"
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): INSTALLING SYSTEM UTILITIES" "Yellow"
 
 # Create necessary directories for utilities
 if (-not (Test-Path $BaseBinDir)) {
@@ -2205,13 +2212,14 @@ foreach ($tool in $binMatrix.tools) {
     $script:ProcessedTools++
     
     Write-Host ""
-    Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+    Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host " UTILITY: $($tool.name) [$script:ProcessedTools/$script:TotalTools]" -ForegroundColor Cyan
-    Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+    Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host ""
     
     try {
-        # Determine installation type and execute corresponding function
+        # 4.1: Install utility
+        $script:CurrentToolSubStep = 1
         if ($tool.direct_download) {
             Install-DirectDownload -Url $tool.url -TargetName $tool.target_name
         }
@@ -2226,7 +2234,8 @@ foreach ($tool in $binMatrix.tools) {
             Install-ToolFromArchive -Url $tool.url -ExtractPath $tool.extract_path -Files $tool.files -CopyFiles $copyFiles
         }
         
-        # Generate help
+        # 4.2: Generate help
+        $script:CurrentToolSubStep = 2
         if ($tool.help_command) {
             Generate-ToolHelp -Command $tool.help_command
         }
@@ -2236,52 +2245,61 @@ foreach ($tool in $binMatrix.tools) {
             }
         }
         
+        # 4.3: Success
+        $script:CurrentToolSubStep = 3
         Write-Success "Utility '$($tool.name)' successfully installed"
+        $script:CurrentToolSubStep = 0
     }
     catch {
         Write-Error "Critical error installing '$($tool.name)': $_"
         $script:FailedTools++
+        $script:CurrentToolSubStep = 0
     }
 }
 
-# ==================== ADDITIONAL FILES PROCESSING ====================
-
+# STEP 5: Composer Files
+$script:CurrentMainStep = 5
 Write-Host ""
-
-# Copy Composer files
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): COPYING COMPOSER & OTHER PHP FILES" "Magenta"
 Copy-ComposerFiles
 
+# STEP 6: PHP MIB Files
+$script:CurrentMainStep = 6
 Write-Host ""
-
-# Copy PHP MIB files
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): COPYING PHP MIB FILES" "Magenta"
 Copy-PhpMibFiles
 
+# STEP 7: PHP Blackfire Files
+$script:CurrentMainStep = 7
 Write-Host ""
-
-# Copy PHP Blackfire files
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): COPYING PHP BLACKFIRE FILES" "Magenta"
 Copy-PhpBlackfireFiles
 
+# STEP 8: PHP Ioncube Files
+$script:CurrentMainStep = 8
 Write-Host ""
-
-# Copy PHP Ioncube files
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): COPYING PHP IONCUBE FILES" "Magenta"
 Copy-PhpIoncubeFiles
 
+# STEP 9: PHP Firebird Files
+$script:CurrentMainStep = 9
 Write-Host ""
-
-# Copy PHP Firebird files
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): COPYING PHP FIREBIRD FILES" "Magenta"
 Copy-PhpFirebirdFiles
 
+# STEP 10: Additional Files
+$script:CurrentMainStep = 10
 Write-Host ""
-
-# Copy additional files
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): COPYING ADDITIONAL FILES" "Magenta"
 Copy-AdditionalFiles
 
-# Show final statistics
+# STEP 11: Final Statistics
+$script:CurrentMainStep = 11
 Write-Host ""
+Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): FINAL STATISTICS" "Green"
 Show-Summary
 
 # ==================== MANUAL UPDATE NOTICE ====================
-Write-Host ""
 Write-Banner "MANUAL UPDATE REQUIRED" "Yellow"
 Write-Host ""
 Write-Host "⚠️  " -ForegroundColor Yellow -NoNewline
