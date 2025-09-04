@@ -753,7 +753,7 @@ function Copy-BundleFiles {
     #>
     param([string]$AddonName, [string]$DestDir)
     
-    $bundleSrc = "..\resources\addons_bundle\$AddonName"
+    $bundleSrc = "..\resources\addons\$AddonName"
     
     if (Test-Path $bundleSrc) {
         Write-Progress "COPYING" "Additional files from bundle"
