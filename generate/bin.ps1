@@ -1461,7 +1461,7 @@ function Copy-PhpMibFiles {
     $successRate = if ($mibArchives.Count -gt 0) { [math]::Round(($processedVersions / $mibArchives.Count) * 100, 1) } else { 0 }
     Write-Host "   Success rate:        " -NoNewline -ForegroundColor Gray
     Write-Host "$successRate%" -ForegroundColor $(if ($successRate -ge 90) { "Green" } elseif ($successRate -ge 70) { "Yellow" } else { "Red" })
-    
+    Write-Host ""
     Write-Success "PHP MIB files copy operation completed"
 }
 
@@ -1608,7 +1608,7 @@ function Copy-PhpBlackfireFiles {
     $successRate = if ($blackfireArchives.Count -gt 0) { [math]::Round(($processedVersions / $blackfireArchives.Count) * 100, 1) } else { 0 }
     Write-Host "   Success rate:        " -NoNewline -ForegroundColor Gray
     Write-Host "$successRate%" -ForegroundColor $(if ($successRate -ge 90) { "Green" } elseif ($successRate -ge 70) { "Yellow" } else { "Red" })
-    
+    Write-Host ""
     Write-Success "PHP Blackfire files copy operation completed"
 }
 
@@ -1794,7 +1794,7 @@ function Copy-PhpIoncubeFiles {
     $successRate = if ($ioncubeArchives.Count -gt 0) { [math]::Round(($processedVersions / $ioncubeArchives.Count) * 100, 1) } else { 0 }
     Write-Host "   Success rate:        " -NoNewline -ForegroundColor Gray
     Write-Host "$successRate%" -ForegroundColor $(if ($successRate -ge 90) { "Green" } elseif ($successRate -ge 70) { "Yellow" } else { "Red" })
-    
+    Write-Host "" 
     Write-Success "PHP Ioncube files copy operation completed"
 }
 
@@ -1932,7 +1932,7 @@ function Copy-PhpFirebirdFiles {
     $successRate = if ($firebirdArchives.Count -gt 0) { [math]::Round(($processedVersions / $firebirdArchives.Count) * 100, 1) } else { 0 }
     Write-Host "   Success rate:        " -NoNewline -ForegroundColor Gray
     Write-Host "$successRate%" -ForegroundColor $(if ($successRate -ge 90) { "Green" } elseif ($successRate -ge 70) { "Yellow" } else { "Red" })
-    
+    Write-Host ""
     Write-Success "PHP Firebird files copy operation completed"
 }
 
