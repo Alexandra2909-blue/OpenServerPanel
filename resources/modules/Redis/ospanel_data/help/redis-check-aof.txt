@@ -1,1 +1,0 @@
-Usage: redis-check-aof.exe [--fix|--truncate-to-timestamp $timestamp] <file.manifest|file.aof>
