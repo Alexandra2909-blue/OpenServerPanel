@@ -1188,15 +1188,15 @@ function Copy-ComposerFiles {
     
     # Define source files
     $sources = @{
-        "composer.phar" = "..\resources\composer\composer.phar"
-        "config.json" = "..\resources\composer\config.json"
-        "composer.json" = "..\resources\composer\composer.json"
-        "auth.json" = "..\resources\composer\auth.json"
-        "keys.tags.pub" = "..\resources\composer\keys.tags.pub"
-        "keys.dev.pub" = "..\resources\composer\keys.dev.pub"
-        "browscap.ini" = "..\resources\composer\browscap.ini"
-        "composer.bat" = "..\resources\composer\composer.bat"
-        "phpinfo.php" = "..\resources\composer\phpinfo.php"
+        "composer.phar" = "..\resources\php\composer.phar"
+        "config.json" = "..\resources\php\config.json"
+        "composer.json" = "..\resources\php\composer.json"
+        "auth.json" = "..\resources\php\auth.json"
+        "keys.tags.pub" = "..\resources\php\keys.tags.pub"
+        "keys.dev.pub" = "..\resources\php\keys.dev.pub"
+        "browscap.ini" = "..\resources\php\browscap.ini"
+        "composer.bat" = "..\resources\php\composer.bat"
+        "phpinfo.php" = "..\resources\php\phpinfo.php"
     }
     
     # Create source directory if it doesn't exist
