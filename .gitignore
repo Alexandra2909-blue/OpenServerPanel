@@ -2,6 +2,3 @@
 /addons/**
 /bin/**
 /modules/**
-!/modules/*/
-!/modules/*/ospanel_data/
-!/modules/*/ospanel_data/**
