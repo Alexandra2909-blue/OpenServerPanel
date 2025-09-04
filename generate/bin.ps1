@@ -1803,6 +1803,148 @@ function Copy-PhpIoncubeFiles {
     Write-Success "PHP Ioncube files copy operation completed"
 }
 
+function Copy-PhpFirebirdFiles {
+    <#
+    .SYNOPSIS
+    Downloads and copies Firebird client files to PHP modules
+    #>
+    
+    Write-Banner "COPYING PHP FIREBIRD FILES" "Magenta"
+    Write-Host ""
+    
+    # Define Firebird archives for different PHP versions
+    $firebirdArchives = @{
+        "7.2" = "https://github.com/FirebirdSQL/firebird/releases/download/v3.0.13/Firebird-3.0.13.33818-0-x64.zip"
+        "7.3" = "https://github.com/FirebirdSQL/firebird/releases/download/v3.0.13/Firebird-3.0.13.33818-0-x64.zip"
+        "7.4" = "https://github.com/FirebirdSQL/firebird/releases/download/v3.0.13/Firebird-3.0.13.33818-0-x64.zip"
+        "8.0" = "https://github.com/FirebirdSQL/firebird/releases/download/v4.0.6/Firebird-4.0.6.3221-0-x64.zip"
+        "8.1" = "https://github.com/FirebirdSQL/firebird/releases/download/v4.0.6/Firebird-4.0.6.3221-0-x64.zip"
+        "8.2" = "https://github.com/FirebirdSQL/firebird/releases/download/v4.0.6/Firebird-4.0.6.3221-0-x64.zip"
+        "8.3" = "https://github.com/FirebirdSQL/firebird/releases/download/v4.0.6/Firebird-4.0.6.3221-0-x64.zip"
+        "8.4" = "https://github.com/FirebirdSQL/firebird/releases/download/v4.0.6/Firebird-4.0.6.3221-0-x64.zip"
+    }
+    
+    $processedVersions = 0
+    $skippedVersions = 0
+    $failedVersions = 0
+    
+    foreach ($version in $firebirdArchives.Keys) {
+        $phpModuleDir = "..\modules\PHP-$version"
+        $targetFile = Join-Path $phpModuleDir "fbclient.dll"
+        
+        Write-Host ""
+        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host " PHP-$version FIREBIRD CLIENT" -ForegroundColor Cyan
+        Write-Host "───────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        Write-Host ""
+        
+        $archiveUrl = $firebirdArchives[$version]
+        
+        try {
+            Write-Progress "FIREBIRD-PHP-$version" "Processing Firebird client for PHP $version"
+            
+            # Create PHP module directory if it doesn't exist
+            if (-not (Test-Path $phpModuleDir)) {
+                New-Item -ItemType Directory -Path $phpModuleDir -Force | Out-Null
+                Write-Success "Created PHP module directory: $phpModuleDir"
+            }
+            
+            # Create temporary directory
+            $tmpDir = "$env:TEMP\firebird_$(Get-Random)"
+            $zipPath = "$tmpDir.zip"
+            
+            Write-Progress "FIREBIRD-PHP-$version" "Downloading archive" $archiveUrl
+            
+            # Download archive
+            if ($UseProxy) {
+                & curl --socks5 $ProxyUrl -f -s -L -o $zipPath $archiveUrl 2>$null
+            } else {
+                & curl -f -s -L -o $zipPath $archiveUrl 2>$null
+            }
+            
+            if (-not (Test-Path $zipPath)) {
+                Write-Error "Failed to download Firebird archive for PHP $version"
+                $failedVersions++
+                continue
+            }
+            
+            $fileSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+            Write-Success "Archive downloaded successfully ($fileSize MB)"
+            
+            # Extract archive
+            Write-Progress "FIREBIRD-PHP-$version" "Extracting archive to temporary directory"
+            Expand-Archive -Path $zipPath -DestinationPath $tmpDir -Force
+            
+            # Find fbclient.dll file in extracted content
+            $fbclientFile = Get-ChildItem -Path $tmpDir -File -Recurse | 
+                           Where-Object { $_.Name -eq "fbclient.dll" } | 
+                           Select-Object -First 1
+            
+            if (-not $fbclientFile) {
+                Write-Warning "fbclient.dll file not found in archive for PHP $version"
+                Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+                $failedVersions++
+                continue
+            }
+            
+            Write-Progress "FIREBIRD-PHP-$version" "Found Firebird client: $($fbclientFile.FullName)"
+            
+            # Remove existing file if it exists (for clean overwrite)
+            if (Test-Path $targetFile) {
+                Remove-Item $targetFile -Force
+                Write-Success "Removed existing Firebird client for clean overwrite"
+            }
+            
+            # Copy fbclient.dll to PHP module directory
+            Write-Progress "FIREBIRD-PHP-$version" "Copying Firebird client to PHP module"
+            Copy-Item -Path $fbclientFile.FullName -Destination $targetFile -Force
+            
+            # Verify file was copied
+            if (Test-Path $targetFile) {
+                $copiedFileSize = [math]::Round((Get-Item $targetFile).Length / 1KB, 2)
+                Write-Success "Copied fbclient.dll to $targetFile ($copiedFileSize KB)"
+            } else {
+                Write-Warning "Failed to copy Firebird client for PHP $version"
+                $failedVersions++
+                continue
+            }
+            
+            # Clean up temporary files
+            Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Success "Temporary files cleaned up"
+            
+            $processedVersions++
+            Write-Success "Firebird client successfully processed for PHP $version"
+        }
+        catch {
+            Write-Error "Critical error processing Firebird client for PHP $version : $_"
+            # Clean up on error
+            Remove-Item $tmpDir, $zipPath -Recurse -Force -ErrorAction SilentlyContinue
+            $failedVersions++
+        }
+    }
+    
+    # Show summary
+    Write-Host ""
+    Write-Host "📊 PHP Firebird processing results:" -ForegroundColor White
+    Write-Host ""
+    Write-Host "   Total PHP versions:  " -NoNewline -ForegroundColor Gray
+    Write-Host $firebirdArchives.Count -ForegroundColor White
+    Write-Host "   Processed:           " -NoNewline -ForegroundColor Gray
+    Write-Host $processedVersions -ForegroundColor Green
+    Write-Host "   Skipped:             " -NoNewline -ForegroundColor Gray
+    Write-Host $skippedVersions -ForegroundColor Yellow
+    Write-Host "   Errors:              " -NoNewline -ForegroundColor Gray
+    Write-Host $failedVersions -ForegroundColor Red
+    Write-Host ""
+    
+    $successRate = if ($firebirdArchives.Count -gt 0) { [math]::Round(($processedVersions / $firebirdArchives.Count) * 100, 1) } else { 0 }
+    Write-Host "   Success rate:        " -NoNewline -ForegroundColor Gray
+    Write-Host "$successRate%" -ForegroundColor $(if ($successRate -ge 90) { "Green" } elseif ($successRate -ge 70) { "Yellow" } else { "Red" })
+    
+    Write-Success "PHP Firebird files copy operation completed"
+}
+
 function Copy-AdditionalFiles {
     <#
     .SYNOPSIS
@@ -2123,6 +2265,11 @@ Write-Host ""
 
 # Copy PHP Ioncube files
 Copy-PhpIoncubeFiles
+
+Write-Host ""
+
+# Copy PHP Firebird files
+Copy-PhpFirebirdFiles
 
 Write-Host ""
 
