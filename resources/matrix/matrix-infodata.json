@@ -464,7 +464,7 @@
         },
         "InstantClient":
         {
-            "DownloadUrl": "23.9.0.25.07",
+            "DownloadUrl": "23.8.0.25",
             "ZipPath": "addon.zip",
             "addon_env.bat":
             {
