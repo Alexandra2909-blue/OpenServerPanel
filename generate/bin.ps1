@@ -3042,8 +3042,53 @@ function Process-Smtp4devModule {
     try {
         Write-Progress "SMTP4DEV-PROCESSING" "Processing Smtp4dev module"
 
-        # Standard extraction for now
+        # Extract archive directly to destination
         Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+
+        # Clean up specific Smtp4dev files
+        Write-Progress "SMTP4DEV-PROCESSING" "Cleaning up unnecessary Smtp4dev files"
+
+        # Remove *.pdb files
+        $pdbFiles = @(Get-ChildItem -Path $DestDir -Filter "*.pdb" -File -Recurse -ErrorAction SilentlyContinue)
+        foreach ($file in $pdbFiles) {
+            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
+        }
+
+        if ($pdbFiles.Count -gt 0) {
+            Write-Success "Removed $($pdbFiles.Count) *.pdb files"
+        }
+
+        # Remove specific config files
+        $filesToRemove = @(
+            "web.config",
+            "appsettings.json"
+        )
+
+        $removedFiles = 0
+        foreach ($file in $filesToRemove) {
+            $filePath = Join-Path $DestDir $file
+            if (Test-Path $filePath) {
+                Remove-Item $filePath -Force -ErrorAction SilentlyContinue
+                Write-Success "Removed file: $file"
+                $removedFiles++
+            }
+        }
+
+        # Rename Rnwood.Smtp4dev.xml to w3wp.Smtp4dev.exe.xml
+        $xmlOldPath = Join-Path $DestDir "Rnwood.Smtp4dev.xml"
+        $xmlNewPath = Join-Path $DestDir "w3wp.Smtp4dev.exe.xml"
+        if (Test-Path $xmlOldPath) {
+            Rename-Item -Path $xmlOldPath -NewName "w3wp.Smtp4dev.exe.xml" -Force
+            Write-Success "Renamed Rnwood.Smtp4dev.xml to w3wp.Smtp4dev.exe.xml"
+        }
+
+        # Rename Rnwood.Smtp4dev.exe to w3wp.Smtp4dev.exe
+        $exeOldPath = Join-Path $DestDir "Rnwood.Smtp4dev.exe"
+        $exeNewPath = Join-Path $DestDir "w3wp.Smtp4dev.exe"
+        if (Test-Path $exeOldPath) {
+            Rename-Item -Path $exeOldPath -NewName "w3wp.Smtp4dev.exe" -Force
+            Write-Success "Renamed Rnwood.Smtp4dev.exe to w3wp.Smtp4dev.exe"
+        }
 
         Write-Success "Smtp4dev module processing completed"
         return $true
