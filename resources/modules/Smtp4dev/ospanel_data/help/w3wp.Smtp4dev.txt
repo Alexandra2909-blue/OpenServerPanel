@@ -1,4 +1,3 @@
-smtp4dev version 3.8.6+6373fe271cecadc1b8ef3532c87d7ec5b38e1f8d
 https://github.com/rnwood/smtp4dev
 .NET Core runtime version: .NET 8.0.2
 
