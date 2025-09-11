@@ -100,6 +100,29 @@
         "help_command": ["sd.exe", "--help"]
     },
     {
+        "name": "sqlite3",
+        "url": "https://www.sqlite.org/2025/sqlite-tools-win-x64-3500400.zip",
+        "extract_path": "",
+        "files": ["sqlite3.exe", "sqlite3_analyzer.exe", "sqlite3_rsync.exe", "sqldiff.exe"],
+        "help_commands": [
+        {
+            "command": ["sqlite3.exe", "-help"],
+            "output": "sqlite3.txt"
+        },
+        {
+            "command": ["sqlite3_analyzer.exe", " "],
+            "output": "sqlite3_analyzer.txt"
+        },
+        {
+            "command": ["sqlite3_rsync.exe", "--help"],
+            "output": "sqlite3_rsync.txt"
+        },
+        {
+            "command": ["sqldiff.exe", "--help"],
+            "output": "sqldiff.txt"
+        }]
+    },
+    {
         "name": "xh",
         "url": "https://github.com/ducaale/xh/releases/download/v0.24.1/xh-v0.24.1-x86_64-pc-windows-msvc.zip",
         "extract_path": "xh*",
