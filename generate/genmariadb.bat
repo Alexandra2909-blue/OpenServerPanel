@@ -1,6 +1,5 @@
 :: --------------------------------------------------------------------------------
-:: OPEN SERVER PANEL | DB INIT SCRIPT
-:: Optimized version with improved error handling and console logging
+:: OPEN SERVER PANEL | MARIADB INIT SCRIPT
 :: --------------------------------------------------------------------------------
 @echo off
 setlocal enabledelayedexpansion
@@ -22,13 +21,13 @@ echo ===========================================================================
 echo [%date% %time%] Starting MariaDB initialization...
 echo.
 
-:: Define MariaDB versions array
-set "MARIADB_VERSIONS=MariaDB-10.4 MariaDB-10.5 MariaDB-10.6 MariaDB-10.11 MariaDB-11.4 MariaDB-11.8"
+:: Define database versions array
+set "DB_VERSIONS=MariaDB-10.4 MariaDB-10.5 MariaDB-10.6 MariaDB-10.11 MariaDB-11.4 MariaDB-11.8"
 
-:: Process each MariaDB version
-for %%V in (%MARIADB_VERSIONS%) do (
+:: Process each database version
+for %%V in (%DB_VERSIONS%) do (
     echo [%date% %time%] ^>^>^> Processing %%V...
-    call :init_mariadb "%%V"
+    call :init_db "%%V"
     if !errorlevel! neq 0 (
         echo [%date% %time%] ❌ ERROR: Failed to initialize %%V
         echo.
@@ -52,39 +51,44 @@ if defined HAS_ERRORS (
 )
 
 :: --------------------------------------------------------------------------------
-:: INIT MariaDB with improved error handling and progress indication
+:: INIT database with improved error handling and progress indication
 :: --------------------------------------------------------------------------------
-:init_mariadb
+:init_db
 setlocal enabledelayedexpansion
 set "VERSION=%~1"
-set "mysql_dir=%OSP_ROOT_DIR%\modules\%VERSION%"
-set "mysql_dir_unix=%OSP_ROOT_DIR_UNIX%/modules/%VERSION%"
+set "db_dir=%OSP_ROOT_DIR%\modules\%VERSION%"
+set "db_dir_unix=%OSP_ROOT_DIR_UNIX%/modules/%VERSION%"
+set "data_dir=%OSP_ROOT_DIR%\modules\%VERSION%\ospanel_data\default_data"
 
 echo     📁 Checking if %VERSION% directory exists...
-if not exist "%mysql_dir%" (
-    echo     ❌ ERROR: Directory %mysql_dir% does not exist!
+if not exist "%db_dir%" (
+    echo     ❌ ERROR: Directory %db_dir% does not exist!
     exit /b 1
 )
 
-echo     🧹 Cleaning old data directory...
-if exist "%mysql_dir%\data" (
-    rd /s /q "%mysql_dir%\data" 2>nul
-    if exist "%mysql_dir%\data" (
-        echo     ⚠️  WARNING: Could not completely remove old data directory
+echo     🧹 Cleaning old data and configuration...
+if exist "%data_dir%" (
+    rd /s /q "%data_dir%" 2>nul
+    if exist "%data_dir%" (
+        echo    ⚠️  WARNING: Could not completely remove old data directory
     )
 )
 
+:: Clean old configuration files
+del "%db_dir%\*.ini" /q >nul 2>&1
+
 :: Set environment variables
-call :set_mysql_environment "%mysql_dir%" "%VERSION%"
+echo     🔧 Setting up environment...
+call :set_db_environment "%db_dir%" "%VERSION%"
 
 :: Create necessary directories
 echo     📂 Creating directory structure...
-call :create_directories "%mysql_dir%"
+call :create_directories "%data_dir%"
 if !errorlevel! neq 0 exit /b 1
 
 :: Configure my.ini
 echo     ⚙️  Configuring my.ini...
-call :configure_mysql_ini "%mysql_dir%" "%VERSION%"
+call :configure_db_ini "%db_dir%" "%VERSION%"
 if !errorlevel! neq 0 (
     echo     ❌ ERROR: Failed to configure my.ini
     exit /b 1
@@ -92,11 +96,11 @@ if !errorlevel! neq 0 (
 
 :: Initialize database
 echo     💾 Installing database...
-cd /d "%mysql_dir%"
+cd /d "%db_dir%"
 copy my.ini my-default.ini >nul 2>&1
 copy my.ini my_print_defaults.ini >nul 2>&1
 
-bin\mysql_install_db.exe --datadir="%mysql_dir%\data" --allow-remote-root-access -o
+bin\mysql_install_db.exe --datadir="%data_dir%" --allow-remote-root-access -o
 if !errorlevel! neq 0 (
     echo     ❌ ERROR: Database installation failed
     exit /b 1
@@ -108,28 +112,30 @@ timeout /t 3 /nobreak > nul
 :: Clean up temporary ini files
 del "*.ini" /q >nul 2>&1
 
-:: First startup - timezone configuration
-echo     🌍 Configuring timezone settings...
-call :configure_mysql_ini "%mysql_dir%" "%VERSION%"
-call :start_mysql_and_execute "%mysql_dir%" "%VERSION%" "%OSP_ROOT_DIR%\generate\setup\timezone_posix.sql" "timezone"
+:: Configure my.ini again for startup
+call :configure_db_ini "%db_dir%" "%VERSION%"
+
+:: MySQL X Plugin installation not needed for MariaDB
+:: Placeholder to maintain structure alignment
+
+:: Configure timezone data (version-specific logic)
+echo     🌍 Configuring timezone data...
+call :configure_timezone "%db_dir%" "%VERSION%"
 if !errorlevel! neq 0 exit /b 1
 
-:: Second startup - main installation
-echo     🔧 Running main installation...
-copy /Y "%OSP_ROOT_DIR%\generate\config\mariadb\my_configured.ini" "%mysql_dir%\my.ini" >nul
-call :replace_placeholders "%mysql_dir%\my.ini" "%OSP_ROOT_DIR_UNIX%" "%VERSION%"
-call :start_mysql_and_execute "%mysql_dir%" "%VERSION%" "%OSP_ROOT_DIR%\generate\setup\install.sql" "installation"
+echo     ⏳ Waiting for timezone configuration to complete...
+timeout /t 3 /nobreak > nul
+
+:: Execute main installation SQL
+echo     🔧 Running main installation script...
+copy /Y "%OSP_ROOT_DIR%\generate\config\mariadb\my_configured.ini" "%db_dir%\my.ini" >nul
+call :replace_placeholders "%db_dir%\my.ini" "%OSP_ROOT_DIR_UNIX%" "%VERSION%"
+call :execute_installation_sql "%db_dir%" "%VERSION%"
 if !errorlevel! neq 0 exit /b 1
 
-:: Final cleanup and backup
+:: Final cleanup
 echo     🧹 Performing final cleanup...
-call :final_cleanup "%mysql_dir%"
-
-echo     💾 Creating backup of initialized data...
-call :create_data_backup "%mysql_dir%" "%VERSION%"
-if !errorlevel! neq 0 (
-    echo     ⚠️  WARNING: Data backup failed
-)
+call :final_cleanup "%db_dir%"
 
 echo     ✅ %VERSION% initialization completed!
 
@@ -140,26 +146,25 @@ exit /b 0
 :: Helper functions
 :: --------------------------------------------------------------------------------
 
-:set_mysql_environment
-set "mysql_dir=%~1"
+:set_db_environment
+set "db_dir=%~1"
 set "version=%~2"
 set "DBI_USER="
 set "DBI_TRACE="
 set "MYSQL_GROUP_SUFFIX="
-set "MYSQL_HOME=%mysql_dir%"
-set "MYSQL_HOST=127.0.0.1"
+set "MYSQL_HOME=%db_dir%"
 set "MYSQL_PS1="
 set "MYSQL_PWD="
-set "MYSQL_TCP_PORT=3306"
 set "MYSQL_UNIX_PORT=%version%"
-set "TEMP=%mysql_dir%\temp"
+set "TEMP=%db_dir%\temp"
 set "TMP=%TEMP%"
 set "TMPDIR=%TEMP%"
+
 exit /b 0
 
 :create_directories
-set "mysql_dir=%~1"
-for %%D in ("%mysql_dir%\temp" "%mysql_dir%\data" "%mysql_dir%\ospanel_data\default_data") do (
+set "data_dir=%~1"
+for %%D in ("%data_dir%") do (
     if not exist "%%D" (
         mkdir "%%D" 2>nul
         if not exist "%%D" (
@@ -170,15 +175,15 @@ for %%D in ("%mysql_dir%\temp" "%mysql_dir%\data" "%mysql_dir%\ospanel_data\defa
 )
 exit /b 0
 
-:configure_mysql_ini
-set "mysql_dir=%~1"
+:configure_db_ini
+set "db_dir=%~1"
 set "version=%~2"
-copy /Y "%OSP_ROOT_DIR%\generate\config\mariadb\my.ini" "%mysql_dir%\my.ini" >nul
+copy /Y "%OSP_ROOT_DIR%\generate\config\mariadb\my.ini" "%db_dir%\my.ini" >nul 2>&1
 if !errorlevel! neq 0 (
     echo     ❌ ERROR: Failed to copy my.ini template
     exit /b 1
 )
-call :replace_placeholders "%mysql_dir%\my.ini" "%OSP_ROOT_DIR_UNIX%" "%version%"
+call :replace_placeholders "%db_dir%\my.ini" "%OSP_ROOT_DIR_UNIX%" "%version%"
 exit /b 0
 
 :replace_placeholders
@@ -186,44 +191,78 @@ powershell -NoLogo -NoProfile -Command ^
   "try { (Get-Content '%~1') -replace '{root_dir}', '%~2' -replace '{module_name}', '%~3' | Set-Content '%~1'; exit 0 } catch { exit 1 }" >nul 2>&1
 exit /b %errorlevel%
 
-:start_mysql_and_execute
-set "mysql_dir=%~1"
+:get_db_startup_params
+set "version=%~1"
+:: MariaDB uses standard startup parameters
+set "DB_STARTUP_PARAMS=--enable-named-pipe --standalone --console"
+exit /b 0
+
+:initialize_database
+:: MariaDB uses mysql_install_db.exe directly in main function
+:: This function kept for structure alignment
+exit /b 0
+
+:start_db_and_execute
+set "db_dir=%~1"
 set "version=%~2"
 set "sql_file=%~3"
 set "operation=%~4"
 
-echo       🚀 Starting MySQL server for %operation%...
-start "MySQL_%version%_%operation%" bin\mysqld.exe --defaults-file="%mysql_dir%\my.ini" --enable-named-pipe --standalone --console
+call :get_db_startup_params "%version%"
+
+echo       🚀 Starting database server for %operation%...
+start "MySQL_%version%_%operation%" bin\mysqld.exe --defaults-file="%db_dir%\my.ini" %DB_STARTUP_PARAMS%
 
 echo       ⏳ Waiting for server to start...
 timeout /t 5 /nobreak > nul
 
-echo       📜 Executing %operation% SQL...
-bin\mysql.exe --force --protocol=PIPE --socket=%version% --host="" -u root mysql < "%sql_file%"
-set "sql_result=!errorlevel!"
+if "%sql_file%" neq "" (
+    echo       📜 Executing %operation% SQL...
+    bin\mysql.exe --force --skip-ssl --protocol=PIPE --socket=%version% --host="" -u root mysql < "%sql_file%"
+    set "sql_result=!errorlevel!"
+) else (
+    set "sql_result=0"
+)
 
-echo       🛑 Shutting down MySQL server...
-bin\mysqladmin.exe --protocol=PIPE --socket=%version% --host="" -u root shutdown
+echo       🛑 Shutting down database server...
+bin\mysqladmin.exe --protocol=PIPE --socket=%version% --host="" -u root shutdown >nul 2>&1
 timeout /t 5 /nobreak > nul
 
 if !sql_result! neq 0 (
-    echo     ❌ ERROR: %operation% SQL execution failed
+    echo     ❌ ERROR: %operation% execution failed
     exit /b 1
 )
 exit /b 0
 
-:final_cleanup
-set "mysql_dir=%~1"
-if exist "%mysql_dir%\temp" rd /s /q "%mysql_dir%\temp" 2>nul
-del "%mysql_dir%\data\*.ini" /q >nul 2>&1
-del "%mysql_dir%\data\*.err" /q >nul 2>&1
-del "%mysql_dir%\*.ini" /q >nul 2>&1
+:install_mysqlx_plugin
+:: MySQL X Plugin not applicable for MariaDB
+:: This function kept for structure alignment
 exit /b 0
 
-:create_data_backup
-set "mysql_dir=%~1"
+:configure_timezone
+set "db_dir=%~1"
 set "version=%~2"
-robocopy "%mysql_dir%\data" "%OSP_ROOT_DIR%\modules\%version%\ospanel_data\default_data" /UNICODE /DCOPY:DAT /COPY:DAT /TIMFIX /MIR /J /MT:16 /R:2 /W:2 /NFL /NDL >nul 2>&1
-if !errorlevel! gtr 7 exit /b 1
-rd /s /q "%mysql_dir%\data" 2>nul
+
+:: MariaDB uses standard timezone configuration
+call :start_db_and_execute "%db_dir%" "%version%" "%OSP_ROOT_DIR%\generate\setup\timezone_posix.sql" "timezone"
+exit /b %errorlevel%
+
+
+:start_db_and_execute_timezone_with_host
+:: Not needed for MariaDB - kept for structure alignment
+exit /b 0
+
+:execute_installation_sql
+set "db_dir=%~1"
+set "version=%~2"
+
+call :start_db_and_execute "%db_dir%" "%version%" "%OSP_ROOT_DIR%\generate\setup\install.sql" "installation"
+exit /b %errorlevel%
+
+:final_cleanup
+set "db_dir=%~1"
+if exist "%db_dir%\temp" rd /s /q "%db_dir%\temp" 2>nul
+del "%db_dir%\ospanel_data\default_data\*.ini" /q >nul 2>&1
+del "%db_dir%\ospanel_data\default_data\*.err" /q >nul 2>&1
+del "%db_dir%\*.ini" /q >nul 2>&1
 exit /b 0

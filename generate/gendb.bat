@@ -2,14 +2,15 @@
 :: OPEN SERVER PANEL | DB INIT SCRIPT
 :: --------------------------------------------------------------------------------
 @echo off
-set "OSP_ROOT_DIR=%~dp0..\"
+set LC_MESSAGES=English
+set "TMP_ROOT=%~dp0.."
+for %%I in ("%TMP_ROOT%") do set "TMP_ROOT=%%~fI"
+set "OSP_ROOT_DIR=%TMP_ROOT%"
+set "OSP_ROOT_DIR_UNIX=%TMP_ROOT:\=/%"
 chcp 65001 > nul
-for /d %%D in ("%OSP_ROOT_DIR%generate\config\*") do robocopy "%%D" "%OSP_ROOT_DIR%config\%%~nxD" /UNICODE /DCOPY:DAT /COPY:DAT /TIMFIX /E /J /ETA /IM /MT:32 /R:3 /W:3 >nul 2>nul
-rd    "%OSP_ROOT_DIR%generate\new_data" /s /q 2>nul
-mkdir "%OSP_ROOT_DIR%generate\new_data" 2>nul
 TITLE DB Generator
-start "MariaDB Generator" "%OSP_ROOT_DIR%generate\genmariadb.bat"
-start "MySQL Generator" "%OSP_ROOT_DIR%generate\genmysql.bat"
+call "%OSP_ROOT_DIR%\generate\genmariadb.bat"
+call "%OSP_ROOT_DIR%\generate\genmysql.bat"
 call :posgresql PostgreSQL-11
 call :posgresql PostgreSQL-12
 call :posgresql PostgreSQL-13
@@ -22,16 +23,29 @@ goto end
 :: INIT PostgreSQL
 :: --------------------------------------------------------------------------------
 :posgresql
-call osp off %1
-call osp init %1 default
-call osp use %1
-rd "%OSP_ROOT_DIR%data\%1\default" /s /q 2>nul
-mkdir "%OSP_ROOT_DIR%data\%1\default"
-mkdir "%OSP_ROOT_DIR%generate\new_data\%1\ospanel_data\default_data"
-initdb --data-checksums --no-locale -U postgres --encoding=UTF8 -D "%OSP_ROOT_DIR%data\%1\default"
-del "%OSP_ROOT_DIR%data\%1\default\pg_hba.conf" "%OSP_ROOT_DIR%data\%1\default\postgresql.conf"
-robocopy "%OSP_ROOT_DIR%data\%1\default" "%OSP_ROOT_DIR%generate\new_data\%1\ospanel_data\default_data" /UNICODE /DCOPY:DAT /COPY:DAT /TIMFIX /MIR /J /ETA /IM /MT:32 /R:3 /W:3 >nul 2>nul
+setlocal
+powershell -NoLogo -NoProfile -Command ^
+  "try { (Get-Content '%OSP_ROOT_DIR%\generate\config\PostgreSQL\postgresql.conf') -replace '{root_dir}', '%OSP_ROOT_DIR%' -replace '{module_name}', '%1' | Set-Content '%OSP_ROOT_DIR%\modules\%1\ospanel_data\default_data\postgresql.conf'; exit 0 } catch { exit 1 }" >nul 2>&1
+copy /Y "%OSP_ROOT_DIR%\generate\config\PostgreSQL\pg_hba.conf" "%OSP_ROOT_DIR%\modules\%1\ospanel_data\default_data\pg_hba.conf" >nul 2>&1
+set "PGDATA=%OSP_ROOT_DIR%\modules\%1\ospanel_data\default_data"
+set "PGCLIENTENCODING=utf-8"
+set "PGHOST=127.0.0.1"
+set "PGLOCALEDIR=%OSP_ROOT_DIR%\modules\%1\share\locale"
+set "PGPORT=5432"
+set "PGSSLMODE=disable"
+set "PGSYSCONFDIR=%OSP_ROOT_DIR%\modules\%1\ospanel_data\default_data"
+set "PGTZ={time_zone}"
+set "PGUSER=postgres"
+set "TEMP=%OSP_ROOT_DIR%\modules\%1\temp"
+set "TMP=%OSP_ROOT_DIR%\modules\%1\temp"
+rd "%TMP%" /s /q 2>nul
+rd "%PGDATA%" /s /q 2>nul
+mkdir "%TMP%" 2>nul
+mkdir "%PGDATA%" 2>nul
+%OSP_ROOT_DIR%\modules\%1\bin\initdb.exe --data-checksums --no-locale -U postgres --encoding=UTF8 -D "%PGDATA%"
+del "%PGDATA%\pg_hba.conf" "%PGDATA%\postgresql.conf"
+rd /s /q "%TMP%" 2>nul
+endlocal
 exit /b 0
 :end
 echo on
-@PAUSE
