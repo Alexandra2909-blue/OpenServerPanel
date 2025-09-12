@@ -31,7 +31,7 @@
     },
     {
         "name": "curl",
-        "url": "https://curl.se/windows/dl-8.15.0_7/curl-8.15.0_7-win64-mingw.zip",
+        "url": "https://curl.se/windows/dl-8.16.0_1/curl-8.16.0_1-win64-mingw.zip",
         "extract_path": "curl*\\bin",
         "files": ["curl.exe", "libcurl-x64.dll"],
         "help_command": ["curl.exe", "--help"]
@@ -110,7 +110,7 @@
             "output": "sqlite3.txt"
         },
         {
-            "command": ["sqlite3_analyzer.exe", " "],
+            "command": ["sqlite3_analyzer.exe", ""],
             "output": "sqlite3_analyzer.txt"
         },
         {
