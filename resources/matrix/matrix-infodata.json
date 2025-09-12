@@ -298,7 +298,7 @@
                 "MAGICK_AREA_LIMIT": "",
                 "MAGICK_CODER_FILTER_PATH": "{root_dir}\\addons\\{addon_name}\\filters",
                 "MAGICK_CODER_MODULE_PATH": "{root_dir}\\addons\\{addon_name}\\coders",
-                "MAGICK_CONFIGURE_PATH": "{root_dir}\\addons\\{addon_name}\\imconfig",
+                "MAGICK_CONFIGURE_PATH": "{root_dir}\\addons\\{addon_name}\\config",
                 "MAGICK_DATE_PRECISION": "",
                 "MAGICK_DEBUG": "",
                 "MAGICK_DISK_LIMIT": "",
@@ -357,7 +357,7 @@
                 "MAGICK_AREA_LIMIT": "",
                 "MAGICK_CODER_FILTER_PATH": "{root_dir}\\addons\\{addon_name}\\filters",
                 "MAGICK_CODER_MODULE_PATH": "{root_dir}\\addons\\{addon_name}\\coders",
-                "MAGICK_CONFIGURE_PATH": "{root_dir}\\addons\\{addon_name}\\imconfig",
+                "MAGICK_CONFIGURE_PATH": "{root_dir}\\addons\\{addon_name}\\config",
                 "MAGICK_DATE_PRECISION": "",
                 "MAGICK_DEBUG": "",
                 "MAGICK_DISK_LIMIT": "",
@@ -416,7 +416,7 @@
                 "MAGICK_AREA_LIMIT": "",
                 "MAGICK_CODER_FILTER_PATH": "{root_dir}\\addons\\{addon_name}\\filters",
                 "MAGICK_CODER_MODULE_PATH": "{root_dir}\\addons\\{addon_name}\\coders",
-                "MAGICK_CONFIGURE_PATH": "{root_dir}\\addons\\{addon_name}\\imconfig",
+                "MAGICK_CONFIGURE_PATH": "{root_dir}\\addons\\{addon_name}\\config",
                 "MAGICK_DATE_PRECISION": "",
                 "MAGICK_DEBUG": "",
                 "MAGICK_DISK_LIMIT": "",
@@ -520,39 +520,6 @@
                 "version": "1.6.0"
             }
         },
-        "MongoTools":
-        {
-            "DownloadUrl": "https://fastdl.mongodb.org/tools/db/mongodb-database-tools-windows-x86_64-100.13.0.zip",
-            "addon_env.bat":
-            {
-                "comment": "::",
-                "destination": "{root_dir}\\data\\cli\\env_{addon_name}.bat",
-                "directory_separator": "\\",
-                "enabled": "on",
-                "encoding": "UTF8",
-                "source_dir": "{root_dir}\\system\\templates"
-            },
-            "docs":
-            {
-                "English": "https://www.mongodb.com/docs/database-tools/"
-            },
-            "environment":
-            {
-                "PATH": "{root_dir}\\addons\\{addon_name}\\bin;%PATH%"
-            },
-            "help": "--help",
-            "main":
-            {
-                "architecture": "x64",
-                "category": "MongoDB Tools",
-                "enabled": "on",
-                "license": "https://creativecommons.org/licenses/by-nc-sa/3.0/us/",
-                "license_type": "CC BY-NC-SA 3.0 US",
-                "min_windows_ver": "10.0.10240",
-                "timestamp": "1651770000",
-                "version": "100.13.0"
-            }
-        },
         "MongoShell":
         {
             "DownloadUrl": "https://downloads.mongodb.com/compass/mongosh-2.5.7-win32-x64.zip",
@@ -584,6 +551,39 @@
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
                 "version": "2.5.7"
+            }
+        },
+        "MongoTools":
+        {
+            "DownloadUrl": "https://fastdl.mongodb.org/tools/db/mongodb-database-tools-windows-x86_64-100.13.0.zip",
+            "addon_env.bat":
+            {
+                "comment": "::",
+                "destination": "{root_dir}\\data\\cli\\env_{addon_name}.bat",
+                "directory_separator": "\\",
+                "enabled": "on",
+                "encoding": "UTF8",
+                "source_dir": "{root_dir}\\system\\templates"
+            },
+            "docs":
+            {
+                "English": "https://www.mongodb.com/docs/database-tools/"
+            },
+            "environment":
+            {
+                "PATH": "{root_dir}\\addons\\{addon_name}\\bin;%PATH%"
+            },
+            "help": "--help",
+            "main":
+            {
+                "architecture": "x64",
+                "category": "MongoDB Tools",
+                "enabled": "on",
+                "license": "https://creativecommons.org/licenses/by-nc-sa/3.0/us/",
+                "license_type": "CC BY-NC-SA 3.0 US",
+                "min_windows_ver": "10.0.10240",
+                "timestamp": "1651770000",
+                "version": "100.13.0"
             }
         },
         "NVM":
