@@ -7,29 +7,20 @@
 # Version:     2.1
 # Date:        2025
 # ================================================================================
+
 $env:LC_ALL = "en_US.UTF-8"; $env:LANG = "en_US.UTF-8"
 $env:TEMP = "A:"
+
 # ================== SCRIPT CONFIGURATION ==================
-# Path to JSON file with addons matrix
 $JsonPath       = "..\resources\matrix\matrix-infodata.json"
-
-# Path to JSON file with utilities matrix
 $BinMatrixPath  = "..\resources\matrix\matrix-bin.json"
-
-# Base directory for placing addons
 $BaseAddonsDir  = "..\addons"
-
-# Base directory for placing utilities
 $BaseBinDir     = "..\bin"
-
-# Enable SOCKS5 proxy for file downloads (true/false)
 $UseProxy       = $true
-
-# SOCKS5 proxy for file downloads
 $ProxyUrl       = "127.0.0.1:1086"
 # ==========================================================
 
-# ================== GLOBAL VARIABLES ==================
+# ================== GLOBAL COUNTERS ==================
 $script:TotalAddons = 0
 $script:ProcessedAddons = 0
 $script:SkippedAddons = 0
@@ -54,69 +45,140 @@ $script:CurrentToolSubStep = 0
 $script:TotalToolSubSteps = 3
 # ===========================================================
 
-# ================== UTILITY FUNCTIONS ==================
+# ================== COMMON HELPERS ==================
 function Write-Banner {
     param([string]$Text, [string]$Color = "Cyan")
-    
     $line = "═" * 80
     Write-Host $line -ForegroundColor $Color
     Write-Host " $Text" -ForegroundColor $Color
     Write-Host $line -ForegroundColor $Color
 }
 
-function Write-Progress {
-    param([string]$AddonName, [string]$Step, [string]$Details = "")
-    
-    $mainStepInfo = "[$($script:CurrentMainStep)/$($script:TotalMainSteps)]"
+function Write-Stage {
+    param([string]$ComponentName, [string]$Step, [string]$Details = "", [ConsoleColor]$Color = [ConsoleColor]::Green)
     $status = if ($Details) { "$Step - $Details" } else { $Step }
-        
-    Write-Host "$AddonName" -ForegroundColor White -NoNewline
-    Write-Host " → $status" -ForegroundColor Green
-}
-
-function Write-PhpProgress {
-    param([string]$ComponentName, [string]$Step, [string]$Details = "")
-    
-    $mainStepInfo = "[$($script:CurrentMainStep)/$($script:TotalMainSteps)]"
-    $status = if ($Details) { "$Step - $Details" } else { $Step }
-    
     Write-Host "$ComponentName" -ForegroundColor White -NoNewline
-    Write-Host " → $status" -ForegroundColor Green
+    Write-Host " → $status" -ForegroundColor $Color
 }
 
-function Write-Success {
-    param([string]$Message)
-    Write-Host "✓ $Message" -ForegroundColor Green
+function Write-Success { param([string]$Message) Write-Host "✓ $Message" -ForegroundColor Green }
+function Write-Warning { param([string]$Message) Write-Host "⚠ $Message" -ForegroundColor Yellow }
+function Write-Error   { param([string]$Message) Write-Host "✗ $Message" -ForegroundColor Red }
+function Write-Skip    { param([string]$Message) Write-Host "⏭  $Message" -ForegroundColor Cyan }
+
+function Ensure-Directory {
+    param([string]$FilePath)
+    $directory = Split-Path -Path $FilePath -Parent
+    if ($directory -and -not (Test-Path $directory)) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+}
+function Ensure-ParentDirectory { param([string]$Path) Ensure-Directory -FilePath $Path }
+
+function New-TempDir {
+    $dir = Join-Path $env:TEMP ("tmpdir_" + (Get-Random))
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    return $dir
 }
 
-function Write-Warning {
-    param([string]$Message)
-    Write-Host "⚠ $Message" -ForegroundColor Yellow
+function Expand-Zip {
+    param([string]$ZipPath, [string]$DestDir)
+    Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
 }
 
-function Write-Error {
-    param([string]$Message)
-    Write-Host "✗ $Message" -ForegroundColor Red
+function Move-AllChildren {
+    param([string]$SourceDir, [string]$DestDir)
+    Get-ChildItem -Path $SourceDir | ForEach-Object {
+        Move-Item -Path $_.FullName -Destination $DestDir -Force
+    }
 }
 
-function Write-Skip {
-    param([string]$Message)
-    Write-Host "⏭  $Message" -ForegroundColor Cyan
+function Remove-DirectoriesIfExists {
+    param([string]$Base, [string[]]$Dirs)
+    $removed = 0
+    foreach ($d in $Dirs) {
+        $p = Join-Path $Base $d
+        if (Test-Path $p) {
+            Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Success "Removed directory: $d"
+            $removed++
+        }
+    }
+    return $removed
 }
 
-function Format-IniLine {
+function Remove-FilesByPatterns {
+    param(
+        [string]$Base,
+        [string[]]$Patterns,
+        [switch]$Recurse
+    )
+    $count = 0
+    foreach ($pat in $Patterns) {
+        $files = Get-ChildItem -Path $Base -Filter $pat -File -ErrorAction SilentlyContinue -Recurse:$Recurse
+        foreach ($f in $files) {
+            Remove-Item $f.FullName -Force -ErrorAction SilentlyContinue
+            $count++
+        }
+    }
+    if ($count -gt 0) {
+        Write-Success "Removed $count files by patterns: $($Patterns -join ', ')"
+    }
+    return $count
+}
+
+function Extract-MoveFromSubfolder {
     <#
-    .SYNOPSIS
-    Formats a string for INI file with alignment
-    
-    .PARAMETER Key
-    Parameter key
-    
-    .PARAMETER Value
-    Parameter value
+      Extract zip to temp, find first subdir by filter, move children to DestDir.
+      If not found, move all root temp items.
     #>
+    param(
+        [string]$ZipPath,
+        [string]$DestDir,
+        [string]$Filter # e.g. "Apache*", "mysql*", "pgsql"
+    )
+    $tmpDir = New-TempDir
+    try {
+        Expand-Zip -ZipPath $ZipPath -DestDir $tmpDir
+        $matchDir = Get-ChildItem -Path $tmpDir -Directory -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Name -like $Filter } |
+                    Select-Object -First 1
+        if ($matchDir) {
+            Move-AllChildren -SourceDir $matchDir.FullName -DestDir $DestDir
+            Write-Success "Moved files from $($matchDir.Name) to module root"
+        } else {
+            Move-AllChildren -SourceDir $tmpDir -DestDir $DestDir
+            Write-Success "Files moved directly to module root"
+        }
+        return $true
+    } catch {
+        Write-Error "Extraction error: $_"
+        return $false
+    } finally {
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Invoke-Curl {
+    param(
+        [string]$Url,
+        [string]$OutFile,
+        [switch]$Silent,
+        [switch]$Follow,
+        [switch]$Fail
+    )
+    $args = @()
+    if ($UseProxy) { $args += @('--socks5', $ProxyUrl) }
+    if ($Fail)    { $args += '-f' }
+    if ($Silent)  { $args += '-s' }
+    if ($Follow)  { $args += '-L' }
+    $args += @('-o', $OutFile, $Url)
+    & curl @args 2>$null
+}
+
+# ================== INI HELPERS ==================
+function Format-IniLine {
     param ([string]$Key, [string]$Value)
-    
     $padding = 25 - $Key.Length
     if ($padding -lt 1) { $padding = 1 }
     $spaces = " " * $padding
@@ -124,180 +186,87 @@ function Format-IniLine {
 }
 
 function Convert-ToIni {
-    <#
-    .SYNOPSIS
-    Converts PowerShell object to INI format
-    
-    .PARAMETER SectionName
-    INI section name
-    
-    .PARAMETER Data
-    Data to convert
-    #>
     param ([string]$SectionName, [object]$Data)
-
     $lines = @()
     $lines += "[$SectionName]"
-    $lines += ""  # Empty line after section name
-
+    $lines += ""
     $props = $Data.PSObject.Properties | Sort-Object Name
-
     foreach ($prop in $props) {
         if ($prop.Value -is [PSCustomObject]) {
             $lines += Convert-ToIni -SectionName $prop.Name -Data $prop.Value
-        }
-        elseif ($prop.Value -is [System.Collections.IDictionary]) {
+        } elseif ($prop.Value -is [System.Collections.IDictionary]) {
             foreach ($kv in ($prop.Value.GetEnumerator() | Sort-Object Key)) {
                 $lines += (Format-IniLine $kv.Key $kv.Value)
             }
-        }
-        else {
+        } else {
             $lines += (Format-IniLine $prop.Name $prop.Value)
         }
     }
     return $lines
 }
 
+# ================== PREREQUISITES / CONFIG LOAD ==================
 function Test-Prerequisites {
-    <#
-    .SYNOPSIS
-    Checks for required files and tools
-    #>
-    
-    Write-Progress "SYSTEM" "Checking prerequisites"
-    
-    # Check JSON files
-    if (-not (Test-Path $JsonPath)) {
-        Write-Error "Addons configuration file not found: $JsonPath"
-        return $false
-    }
-    
-    if (-not (Test-Path $BinMatrixPath)) {
-        Write-Error "Utilities configuration file not found: $BinMatrixPath"
-        return $false
-    }
-    
-    # Check curl
-    try {
-        $null = Get-Command curl -ErrorAction Stop
-        Write-Success "Curl utility found"
-    }
-    catch {
-        Write-Error "Curl utility not found in system"
-        return $false
-    }
-    
-    # Check proxy configuration
-    if ($UseProxy) {
-        Write-Success "Proxy enabled: $ProxyUrl"
-    } else {
-        Write-Success "Direct connection mode enabled"
-    }
-    
+    Write-Stage "SYSTEM" "Checking prerequisites"
+    if (-not (Test-Path $JsonPath)) { Write-Error "Addons configuration file not found: $JsonPath"; return $false }
+    if (-not (Test-Path $BinMatrixPath)) { Write-Error "Utilities configuration file not found: $BinMatrixPath"; return $false }
+    try { $null = Get-Command curl -ErrorAction Stop; Write-Success "Curl utility found" }
+    catch { Write-Error "Curl utility not found in system"; return $false }
+    if ($UseProxy) { Write-Success "Proxy enabled: $ProxyUrl" } else { Write-Success "Direct connection mode enabled" }
     Write-Success "All prerequisites met"
     return $true
 }
 
 function Get-AddonsList {
-    <#
-    .SYNOPSIS
-    Loads and parses addon list from JSON
-    #>
-    
     try {
-        Write-Progress "SYSTEM" "Loading addons configuration"
-        
+        Write-Stage "SYSTEM" "Loading addons configuration"
         $infodata = Get-Content $JsonPath -Raw | ConvertFrom-Json
         $addons = $infodata.addons.PSObject.Properties.Name | Sort-Object -Unique
-        
         $script:TotalAddons = $addons.Count
         Write-Success "Loaded $($script:TotalAddons) addons from configuration"
-        
-        return @{
-            InfoData = $infodata
-            Addons = $addons
-        }
-    }
-    catch {
-        Write-Error "Error loading addons configuration: $_"
-        return $null
-    }
+        return @{ InfoData = $infodata; Addons = $addons }
+    } catch { Write-Error "Error loading addons configuration: $_"; return $null }
 }
 
 function Get-ToolsList {
-    <#
-    .SYNOPSIS
-    Loads and parses utilities list from JSON
-    #>
-    
     try {
-        Write-Progress "SYSTEM" "Loading utilities configuration"
-        
+        Write-Stage "SYSTEM" "Loading utilities configuration"
         $binMatrix = Get-Content $BinMatrixPath -Raw | ConvertFrom-Json
         $tools = $binMatrix.tools
-        
         $script:TotalTools = $tools.Count
         Write-Success "Loaded $($script:TotalTools) utilities from configuration"
-        
         return $binMatrix
-    }
-    catch {
-        Write-Error "Error loading utilities configuration: $_"
-        return $null
-    }
+    } catch { Write-Error "Error loading utilities configuration: $_"; return $null }
 }
 
-function Download-Addon {
-    <#
-    .SYNOPSIS
-    Downloads addon via SOCKS5 proxy or direct connection
-    
-    .PARAMETER DownloadUrl
-    URL for downloading
-    
-    .PARAMETER ZipPath
-    Path to save archive
-    #>
-    param([string]$DownloadUrl, [string]$ZipPath)
-    
+function Get-ModulesList {
     try {
-        Write-Progress "DOWNLOAD" "Downloading archive" $DownloadUrl
-        
-        if ($UseProxy) {
-            & curl --socks5 $ProxyUrl -L -o $ZipPath $DownloadUrl 2>$null
-        } else {
-            & curl -L -o $ZipPath $DownloadUrl 2>$null
-        }
-        
-        if (-not (Test-Path $ZipPath)) {
-            Write-Error "Failed to download file: $ZipPath"
-            return $false
-        }
-        
+        Write-Stage "SYSTEM" "Loading modules configuration"
+        $infodata = Get-Content $JsonPath -Raw | ConvertFrom-Json
+        $modules = $infodata.modules.PSObject.Properties.Name | Sort-Object -Unique
+        $script:TotalModules = $modules.Count
+        Write-Success "Loaded $($script:TotalModules) modules from configuration"
+        return @{ InfoData = $infodata; Modules = $modules }
+    } catch { Write-Error "Error loading modules configuration: $_"; return $null }
+}
+
+# ================== DOWNLOAD / EXTRACT (ADDONS) ==================
+function Download-Addon {
+    param([string]$DownloadUrl, [string]$ZipPath)
+    try {
+        Write-Stage "DOWNLOAD" "Downloading archive" $DownloadUrl
+        Invoke-Curl -Url $DownloadUrl -OutFile $ZipPath -Fail -Silent -Follow
+        if (-not (Test-Path $ZipPath)) { Write-Error "Failed to download file: $ZipPath"; return $false }
         $fileSize = [math]::Round((Get-Item $ZipPath).Length / 1MB, 2)
         Write-Success "Archive downloaded successfully ($fileSize MB)"
         return $true
-    }
-    catch {
-        Write-Error "Error during download: $_"
-        return $false
-    }
+    } catch { Write-Error "Error during download: $_"; return $false }
 }
 
 function Process-InstantClient {
-    <#
-    .SYNOPSIS
-    Special processing for InstantClient addon
-       
-    .PARAMETER DestDir
-    Destination directory
-    #>
     param([string]$DestDir)
-    
     try {
-        Write-Progress "INSTANTCLIENT" "Special processing InstantClient"
-        
-        # List of archives to download with version substitution
+        Write-Stage "INSTANTCLIENT" "Special processing InstantClient"
         $archives = @(
             "https://download.oracle.com/otn_software/nt/instantclient/instantclient-odbc-windows.zip",
             "https://download.oracle.com/otn_software/nt/instantclient/instantclient-jdbc-windows.zip",
@@ -305,61 +274,32 @@ function Process-InstantClient {
             "https://download.oracle.com/otn_software/nt/instantclient/instantclient-sqlplus-windows.zip",
             "https://download.oracle.com/otn_software/nt/instantclient/instantclient-basic-windows.zip"
         )
-        
-        # Create target directory
-        if (-not (Test-Path $DestDir)) {
-            New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
-        }
-        
+        if (-not (Test-Path $DestDir)) { New-Item -ItemType Directory -Force -Path $DestDir | Out-Null }
         $downloadedFiles = @()
-        
-        # Download all archives
         foreach ($downloadUrl in $archives) {
             $fileName = Split-Path $downloadUrl -Leaf
             $zipPath = Join-Path (Get-Location) $fileName
-            
-            Write-Progress "INSTANTCLIENT" "Downloading $fileName"
-            
-            if (Download-Addon -DownloadUrl $downloadUrl -ZipPath $zipPath) {
-                $downloadedFiles += $zipPath
-            } else {
-                Write-Warning "Failed to download $fileName, continuing with others"
-            }
+            Write-Stage "INSTANTCLIENT" "Downloading $fileName"
+            if (Download-Addon -DownloadUrl $downloadUrl -ZipPath $zipPath) { $downloadedFiles += $zipPath }
+            else { Write-Warning "Failed to download $fileName, continuing with others" }
         }
-        
-        if ($downloadedFiles.Count -eq 0) {
-            Write-Error "Failed to download any InstantClient archives"
-            return $false
-        }
-        
+        if ($downloadedFiles.Count -eq 0) { Write-Error "Failed to download any InstantClient archives"; return $false }
         Write-Success "Downloaded $($downloadedFiles.Count) of $($archives.Count) archives"
-        
-        # Extract all archives to addon root with file replacement
         foreach ($zipFile in $downloadedFiles) {
-            Write-Progress "INSTANTCLIENT" "Extracting $(Split-Path $zipFile -Leaf)"
-            
+            Write-Stage "INSTANTCLIENT" "Extracting $(Split-Path $zipFile -Leaf)"
             try {
                 Expand-Archive -Path $zipFile -DestinationPath $DestDir -Force
                 Remove-Item $zipFile -Force
                 Write-Success "Archive $(Split-Path $zipFile -Leaf) extracted and deleted"
-            }
-            catch {
-                Write-Warning "Error extracting $(Split-Path $zipFile -Leaf): $_"
-            }
+            } catch { Write-Warning "Error extracting $(Split-Path $zipFile -Leaf): $_" }
         }
-        
-        # Find first instantclient* subfolder
         $instantclientDir = Get-ChildItem -Path $DestDir -Directory -Filter "instantclient*" -ErrorAction SilentlyContinue | Select-Object -First 1
-        
         if ($instantclientDir) {
-            Write-Progress "INSTANTCLIENT" "Moving files from $($instantclientDir.Name)"
-            
-            # Copy everything from subfolder to addon root
+            Write-Stage "INSTANTCLIENT" "Moving files from $($instantclientDir.Name)"
             Get-ChildItem -Path $instantclientDir.FullName | ForEach-Object {
                 $destPath = Join-Path $DestDir $_.Name
                 if ($_.PSIsContainer) {
                     if (Test-Path $destPath) {
-                        # If directory already exists, copy content
                         Copy-Item -Path (Join-Path $_.FullName "*") -Destination $destPath -Recurse -Force
                     } else {
                         Move-Item -Path $_.FullName -Destination $destPath -Force
@@ -368,838 +308,414 @@ function Process-InstantClient {
                     Move-Item -Path $_.FullName -Destination $destPath -Force
                 }
             }
-            
-            # Remove empty instantclient* subfolder
             Remove-Item $instantclientDir.FullName -Force
             Write-Success "Files moved from $($instantclientDir.Name), subfolder removed"
         }
-        
-        # Remove META-INF subfolder if exists
         $metaInfDir = Join-Path $DestDir "META-INF"
-        if (Test-Path $metaInfDir) {
-            Remove-Item $metaInfDir -Recurse -Force
-            Write-Success "META-INF subfolder removed"
-        }
-        
+        if (Test-Path $metaInfDir) { Remove-Item $metaInfDir -Recurse -Force; Write-Success "META-INF subfolder removed" }
         Write-Success "InstantClient special processing completed"
         return $true
-    }
-    catch {
-        Write-Error "Error processing InstantClient: $_"
-        return $false
-    }
-}
-
-function Extract-Addon {
-    <#
-    .SYNOPSIS
-    Extracts addon with special case handling
-    
-    .PARAMETER AddonName
-    Addon name
-    
-    .PARAMETER ZipPath
-    Path to archive
-    
-    .PARAMETER DestDir
-    Destination directory
-    
-    .PARAMETER DownloadUrl
-    Download URL (contains version for InstantClient)
-    #>
-    param([string]$AddonName, [string]$ZipPath, [string]$DestDir, [string]$DownloadUrl = "")
-    
-    try {
-        Write-Progress "EXTRACTION" "Extracting archive"
-        
-        # Create target directory
-        if (-not (Test-Path $DestDir)) {
-            New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
-        }
-
-        # Special processing for different addon types
-        switch -Wildcard ($AddonName) {
-            "InstantClient" {
-                Write-Progress "EXTRACTION" "Special InstantClient processing"
-                return (Process-InstantClient -DestDir $DestDir)
-            }
-            
-            "ImageMagick-*" {
-                Write-Progress "EXTRACTION" "Special ImageMagick processing"
-                # Standard extraction
-                Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
-                
-                # Special processing for ImageMagick
-                Process-ImageMagick -DestDir $DestDir
-            }
-            
-            "DB2-ODBC" {
-                Write-Progress "EXTRACTION" "Special DB2-ODBC processing"
-                $tmpDir = Join-Path $DestDir "_tmp"
-                if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
-                
-                Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-                $clidriver = Join-Path $tmpDir "clidriver"
-                
-                if (Test-Path $clidriver) {
-                    Get-ChildItem -Path $clidriver | ForEach-Object {
-                        Move-Item -Path $_.FullName -Destination $DestDir -Force
-                    }
-                }
-                Remove-Item $tmpDir -Recurse -Force
-            }
-            
-            "FFMpeg" {
-                Write-Progress "EXTRACTION" "Special FFMpeg processing"
-                $tmpDir = Join-Path $DestDir "_tmp"
-                if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
-
-                Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-                $ffmpegDir = Get-ChildItem -Path $tmpDir -Directory -Filter "ffmpeg*" | Select-Object -First 1
-
-                if ($ffmpegDir) {
-                    Get-ChildItem -Path $ffmpegDir.FullName | ForEach-Object {
-                        Move-Item -Path $_.FullName -Destination $DestDir -Force
-                    }
-                }
-                Remove-Item $tmpDir -Recurse -Force
-            }
-            
-            "Libwebp" {
-                Write-Progress "EXTRACTION" "Special Libwebp processing"
-                $tmpDir = Join-Path $DestDir "_tmp"
-                if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
-
-                Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-                $libwebpDir = Get-ChildItem -Path $tmpDir -Directory -Filter "Libwebp*" | Select-Object -First 1
-
-                if ($libwebpDir) {
-                    Get-ChildItem -Path $libwebpDir.FullName | ForEach-Object {
-                        Move-Item -Path $_.FullName -Destination $DestDir -Force
-                    }
-                }
-                Remove-Item $tmpDir -Recurse -Force
-            }
-
-            "MongoTools" {
-                Write-Progress "EXTRACTION" "Special Mongo Tools processing"
-                $tmpDir = Join-Path $DestDir "_tmp"
-                if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
-
-                Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-                $libwebpDir = Get-ChildItem -Path $tmpDir -Directory -Filter "*mongodb*" | Select-Object -First 1
-
-                if ($libwebpDir) {
-                    Get-ChildItem -Path $libwebpDir.FullName | ForEach-Object {
-                        Move-Item -Path $_.FullName -Destination $DestDir -Force
-                    }
-                }
-                Remove-Item $tmpDir -Recurse -Force
-            }
-
-            "MongoShell" {
-                Write-Progress "EXTRACTION" "Special Mongo Shell processing"
-                $tmpDir = Join-Path $DestDir "_tmp"
-                if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
-
-                Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-                $libwebpDir = Get-ChildItem -Path $tmpDir -Directory -Filter "*mongosh*" | Select-Object -First 1
-
-                if ($libwebpDir) {
-                    Get-ChildItem -Path $libwebpDir.FullName | ForEach-Object {
-                        Move-Item -Path $_.FullName -Destination $DestDir -Force
-                    }
-                }
-                Remove-Item $tmpDir -Recurse -Force
-            }
-            
-            default {
-                # Standard extraction
-                Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
-                
-                # Remove archive after extraction (for regular addons)
-                Remove-Item $ZipPath -Force
-            }
-        }
-
-        # For InstantClient archive is not removed as it wasn't there
-        if ($AddonName -ne "InstantClient") {
-            # Remove archive after extraction (if it still exists)
-            if (Test-Path $ZipPath) {
-                Remove-Item $ZipPath -Force
-            }
-        }
-        
-        Write-Success "Archive successfully extracted and deleted"
-        return $true
-    }
-    catch {
-        Write-Error "Error extracting archive: $_"
-        return $false
-    }
+    } catch { Write-Error "Error processing InstantClient: $_"; return $false }
 }
 
 function Process-ImageMagick {
-    <#
-    .SYNOPSIS
-    Special processing for ImageMagick-* addons
-    
-    .PARAMETER DestDir
-    Addon directory
-    #>
     param([string]$DestDir)
-    
     try {
-        Write-Progress "IMAGEMAGICK" "Reorganizing files"
-        
+        Write-Stage "IMAGEMAGICK" "Reorganizing files"
         $binDir = Join-Path $DestDir "bin"
-        
         if (Test-Path $binDir) {
-            # 1. Move everything from bin to addon root
             Get-ChildItem -Path $binDir | ForEach-Object {
                 $destPath = Join-Path $DestDir $_.Name
                 Move-Item -Path $_.FullName -Destination $destPath -Force
             }
             Write-Success "Files moved from bin to root"
-            
-            # 5. Remove bin folder
             Remove-Item $binDir -Force
             Write-Success "Bin folder removed"
         }
-        
-        # 2. Create coders subfolder and move all IM_*.dll files there
         $codersDir = Join-Path $DestDir "coders"
-        if (-not (Test-Path $codersDir)) {
-            New-Item -ItemType Directory -Force -Path $codersDir | Out-Null
-        }
-        
+        if (-not (Test-Path $codersDir)) { New-Item -ItemType Directory -Force -Path $codersDir | Out-Null }
         $imFiles = Get-ChildItem -Path $DestDir -Filter "IM_*.dll" -ErrorAction SilentlyContinue
         if ($imFiles) {
-            $imFiles | ForEach-Object {
-                $destPath = Join-Path $codersDir $_.Name
-                Move-Item -Path $_.FullName -Destination $destPath -Force
-            }
+            $imFiles | ForEach-Object { Move-Item -Path $_.FullName -Destination (Join-Path $codersDir $_.Name) -Force }
             Write-Success "Moved $($imFiles.Count) IM_*.dll files to coders folder"
         }
-        
-        # 3. Create filters subfolder and move all FILTER_*.dll files there
         $filtersDir = Join-Path $DestDir "filters"
-        if (-not (Test-Path $filtersDir)) {
-            New-Item -ItemType Directory -Force -Path $filtersDir | Out-Null
-        }
-        
+        if (-not (Test-Path $filtersDir)) { New-Item -ItemType Directory -Force -Path $filtersDir | Out-Null }
         $filterFiles = Get-ChildItem -Path $DestDir -Filter "FILTER_*.dll" -ErrorAction SilentlyContinue
         if ($filterFiles) {
-            $filterFiles | ForEach-Object {
-                $destPath = Join-Path $filtersDir $_.Name
-                Move-Item -Path $_.FullName -Destination $destPath -Force
-            }
+            $filterFiles | ForEach-Object { Move-Item -Path $_.FullName -Destination (Join-Path $filtersDir $_.Name) -Force }
             Write-Success "Moved $($filterFiles.Count) FILTER_*.dll files to filters folder"
         }
-        
-        # 4. Create imconfig subfolder and move all *.xml files there
-        $imconfigDir = Join-Path $DestDir "imconfig"
-        if (-not (Test-Path $imconfigDir)) {
-            New-Item -ItemType Directory -Force -Path $imconfigDir | Out-Null
-        }
-        
+        $imconfigDir = Join-Path $DestDir "config"
+        if (-not (Test-Path $imconfigDir)) { New-Item -ItemType Directory -Force -Path $imconfigDir | Out-Null }
         $xmlFiles = Get-ChildItem -Path $DestDir -Filter "*.xml" -ErrorAction SilentlyContinue
         if ($xmlFiles) {
-            $xmlFiles | ForEach-Object {
-                $destPath = Join-Path $imconfigDir $_.Name
-                Move-Item -Path $_.FullName -Destination $destPath -Force
-            }
-            Write-Success "Moved $($xmlFiles.Count) *.xml files to imconfig folder"
+            $xmlFiles | ForEach-Object { Move-Item -Path $_.FullName -Destination (Join-Path $imconfigDir $_.Name) -Force }
+            Write-Success "Moved $($xmlFiles.Count) *.xml files to config folder"
         }
-        
         Write-Success "ImageMagick special processing completed"
-    }
-    catch {
-        Write-Error "Error processing ImageMagick: $_"
-    }
+    } catch { Write-Error "Error processing ImageMagick: $_" }
 }
 
-function Generate-HelpFiles {
-    <#
-    .SYNOPSIS
-    Generates help files for addon executable files
-    
-    .PARAMETER AddonName
-    Addon name
-    
-    .PARAMETER DestDir
-    Addon directory
-    
-    .PARAMETER Addon
-    Addon object with settings
-    #>
-    param([string]$AddonName, [string]$DestDir, [object]$Addon)
-    
-    Write-Progress "HELP" "Generating help files"
-    
-    $HelpDir = "$DestDir\ospanel_data\help"
-    
-    # Create help directory
-    if (-not (Test-Path $HelpDir)) {
-        New-Item -ItemType Directory -Force -Path $HelpDir | Out-Null
-    }
+function Extract-Addon {
+    param([string]$AddonName, [string]$ZipPath, [string]$DestDir, [string]$DownloadUrl = "")
+    try {
+        Write-Stage "EXTRACTION" "Extracting archive"
+        if (-not (Test-Path $DestDir)) { New-Item -ItemType Directory -Force -Path $DestDir | Out-Null }
+        switch -Wildcard ($AddonName) {
+            "InstantClient" {
+                Write-Stage "EXTRACTION" "Special InstantClient processing"
+                return (Process-InstantClient -DestDir $DestDir)
+            }
+            "ImageMagick-*" {
+                Write-Stage "EXTRACTION" "Special ImageMagick processing"
+                Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+                Process-ImageMagick -DestDir $DestDir
+            }
+            "DB2-ODBC" {
+                Write-Stage "EXTRACTION" "Special DB2-ODBC processing"
+                $tmpDir = Join-Path $DestDir "_tmp"
+                if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
+                Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
+                $clidriver = Join-Path $tmpDir "clidriver"
+                if (Test-Path $clidriver) {
+                    Get-ChildItem -Path $clidriver | ForEach-Object { Move-Item -Path $_.FullName -Destination $DestDir -Force }
+                }
+                Remove-Item $tmpDir -Recurse -Force
+            }
+            "FFMpeg" {
+                Write-Stage "EXTRACTION" "Special FFMpeg processing"
+                $tmpDir = Join-Path $DestDir "_tmp"
+                if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
+                Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
+                $ffmpegDir = Get-ChildItem -Path $tmpDir -Directory -Filter "ffmpeg*" | Select-Object -First 1
+                if ($ffmpegDir) { Get-ChildItem -Path $ffmpegDir.FullName | ForEach-Object { Move-Item -Path $_.FullName -Destination $DestDir -Force } }
+                Remove-Item $tmpDir -Recurse -Force
+            }
+            "Libwebp" {
+                Write-Stage "EXTRACTION" "Special Libwebp processing"
+                $tmpDir = Join-Path $DestDir "_tmp"
+                if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
+                Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
+                $libwebpDir = Get-ChildItem -Path $tmpDir -Directory -Filter "Libwebp*" | Select-Object -First 1
+                if ($libwebpDir) { Get-ChildItem -Path $libwebpDir.FullName | ForEach-Object { Move-Item -Path $_.FullName -Destination $DestDir -Force } }
+                Remove-Item $tmpDir -Recurse -Force
+            }
+            "MongoTools" {
+                Write-Stage "EXTRACTION" "Special Mongo Tools processing"
+                $tmpDir = Join-Path $DestDir "_tmp"
+                if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
+                Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
+                $toolsDir = Get-ChildItem -Path $tmpDir -Directory -Filter "*mongodb*" | Select-Object -First 1
+                if ($toolsDir) { Get-ChildItem -Path $toolsDir.FullName | ForEach-Object { Move-Item -Path $_.FullName -Destination $DestDir -Force } }
+                Remove-Item $tmpDir -Recurse -Force
+            }
+            "MongoShell" {
+                Write-Stage "EXTRACTION" "Special Mongo Shell processing"
+                $tmpDir = Join-Path $DestDir "_tmp"
+                if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force }
+                Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
+                $shellDir = Get-ChildItem -Path $tmpDir -Directory -Filter "*mongosh*" | Select-Object -First 1
+                if ($shellDir) { Get-ChildItem -Path $shellDir.FullName | ForEach-Object { Move-Item -Path $_.FullName -Destination $DestDir -Force } }
+                Remove-Item $tmpDir -Recurse -Force
+            }
+            default {
+                Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+                Remove-Item $ZipPath -Force
+            }
+        }
+        if ($AddonName -ne "InstantClient") {
+            if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
+        }
+        Write-Success "Archive successfully extracted and deleted"
+        return $true
+    } catch { Write-Error "Error extracting archive: $_"; return $false }
+}
 
-    # Skip generation for special addons
+# ================== HELP GENERATION (COMMON) ==================
+function Write-HelpForExecutables {
+    param(
+        [string]$RootDir,
+        [string]$HelpDir,
+        [string]$DefaultHelpSwitch = "--help",
+        [string[]]$ExcludeExeNames = @()
+    )
+    if (-not (Test-Path $HelpDir)) { New-Item -ItemType Directory -Force -Path $HelpDir | Out-Null }
+    $executables = Get-ChildItem -Path $RootDir -Filter *.exe -Recurse -ErrorAction SilentlyContinue |
+        Where-Object { $ExcludeExeNames -notcontains $_.Name }
+    if (-not $executables) { Write-Warning "No executable files found"; return 0 }
+    $generated = 0
+    foreach ($exe in $executables) {
+        $outFile = Join-Path $HelpDir ($exe.BaseName + ".txt")
+        try {
+            $args = if ($DefaultHelpSwitch) { $DefaultHelpSwitch -split "\s+" } else { @() }
+            $output = & $exe.FullName @($args) 2>&1
+            $filteredOutput = $output | Where-Object { $_.ToString().Trim() -ne "" }
+            if ($filteredOutput) { $filteredOutput | Out-File -FilePath $outFile -Encoding utf8; $generated++ }
+            else { Write-Warning "Empty help output for $($exe.Name)" }
+        } catch { Write-Warning "Error generating help for $($exe.Name): $_" }
+    }
+    return $generated
+}
+
+# ================== ADDONS: HELP/INI/COPY ==================
+function Generate-HelpFiles {
+    param([string]$AddonName, [string]$DestDir, [object]$Addon)
+    Write-Stage "HELP" "Generating help files"
+    $HelpDir = "$DestDir\ospanel_data\help"
+    if (-not (Test-Path $HelpDir)) { New-Item -ItemType Directory -Force -Path $HelpDir | Out-Null }
     if ($AddonName -like "ErlangOTP*" -or $AddonName -eq "Perl" -or $AddonName -eq "NVM") {
         Write-Skip "Help generation skipped for $AddonName"
         return
     }
-
-    # Find executable files
-    $executables = if ($AddonName -in @("DB2-ODBC")) {
-        Get-ChildItem -Path (Join-Path $DestDir "bin") -Filter *.exe -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -notin @('gswin64.exe') }
-    } else {
-        Get-ChildItem -Path $DestDir -Filter *.exe -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -notin @('gswin64.exe') }
-    }
-
-    if (-not $executables) {
-        Write-Warning "No executable files found"
-        return
-    }
-
-    if (-not $executables) {
-        Write-Warning "No executable files found"
-        return
-    }
-
     $helpCmd = if ($Addon.help) { $Addon.help } else { "--help" }
-    $generatedFiles = 0
-
-    foreach ($exe in $executables) {
-        $outFile = Join-Path $HelpDir ($exe.BaseName + ".txt")
-        try {
-            # Special processing for ImageMagick
-            if ($AddonName -like "ImageMagick-*") {
-                # For ImageMagick use execution without parameters to get help
-                $output = & $exe.FullName 2>nul
-            } else {
+    $exclude = @('gswin64.exe')
+    if ($AddonName -in @("DB2-ODBC")) {
+        $executables = Get-ChildItem -Path (Join-Path $DestDir "bin") -Filter *.exe -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notin $exclude }
+        $generated = 0
+        foreach ($exe in $executables) {
+            $outFile = Join-Path $HelpDir ($exe.BaseName + ".txt")
+            try {
                 $args = $helpCmd -split "\s+"
                 $output = & $exe.FullName @($args) 2>&1
-            }
-            
-            # Filter empty lines and write to file
-            $filteredOutput = $output | Where-Object { $_.ToString().Trim() -ne "" }
-            
-            if ($filteredOutput) {
-                $filteredOutput | Out-File -FilePath $outFile -Encoding utf8
-                $generatedFiles++
-            } else {
-                Write-Warning "Empty help output for $($exe.Name)"
-            }
+                $filteredOutput = $output | Where-Object { $_.ToString().Trim() -ne "" }
+                if ($filteredOutput) { $filteredOutput | Out-File -FilePath $outFile -Encoding utf8; $generated++ }
+                else { Write-Warning "Empty help output for $($exe.Name)" }
+            } catch { Write-Warning "Error generating help for $($exe.Name): $_" }
         }
-        catch {
-            Write-Warning "Error generating help for $($exe.Name): $_"
+        Write-Success "Created $generated help files"
+        return
+    } elseif ($AddonName -like "ImageMagick-*") {
+        # Для ImageMagick выполняем без параметров
+        $executables = Get-ChildItem -Path $DestDir -Filter *.exe -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notin $exclude }
+        $generated = 0
+        foreach ($exe in $executables) {
+            $outFile = Join-Path $HelpDir ($exe.BaseName + ".txt")
+            try {
+                $output = & $exe.FullName 2>nul
+                $filteredOutput = $output | Where-Object { $_.ToString().Trim() -ne "" }
+                if ($filteredOutput) { $filteredOutput | Out-File -FilePath $outFile -Encoding utf8; $generated++ }
+            } catch { Write-Warning "Error generating help for $($exe.Name): $_" }
         }
+        Write-Success "Created $generated help files"
+        return
+    } else {
+        [void](Write-HelpForExecutables -RootDir $DestDir -HelpDir $HelpDir -DefaultHelpSwitch $helpCmd -ExcludeExeNames $exclude)
     }
-
-    Write-Success "Created $generatedFiles help files"
 }
 
 function Generate-IniFile {
-    <#
-    .SYNOPSIS
-    Creates addon.ini file for addon
-    
-    .PARAMETER DestDir
-    Addon directory
-    
-    .PARAMETER Addon
-    Addon object with settings
-    #>
     param([string]$DestDir, [object]$Addon)
-    
-    Write-Progress "CONFIGURATION" "Creating addon.ini"
-    
+    Write-Stage "CONFIGURATION" "Creating addon.ini"
     $IniPath = "$DestDir\ospanel_data\addon.ini"
-    
-    # Section order in INI file
     $sectionsOrder = @("main", "docs", "environment")
     $skipSections = @("DownloadUrl", "ZipPath", "help")
-
     $iniContent = @()
-
-    # Add sections in specific order
     foreach ($sec in $sectionsOrder) {
         if ($Addon.PSObject.Properties.Name -contains $sec) {
             $iniContent += Convert-ToIni -SectionName $sec -Data $Addon.$sec
             $iniContent += ""
         }
     }
-
-    # Add other sections
     $otherSections = $Addon.PSObject.Properties.Name |
                      Where-Object { $sectionsOrder -notcontains $_ -and $skipSections -notcontains $_ } |
                      Sort-Object
-
     foreach ($sec in $otherSections) {
         $iniContent += Convert-ToIni -SectionName $sec -Data $Addon.$sec
         $iniContent += ""
     }
-
-    # Create directory and save file
     $iniDir = Split-Path $IniPath -Parent
-    if (-not (Test-Path $iniDir)) {
-        New-Item -ItemType Directory -Force -Path $iniDir | Out-Null
-    }
-    
+    if (-not (Test-Path $iniDir)) { New-Item -ItemType Directory -Force -Path $iniDir | Out-Null }
     $iniContent | Out-File -FilePath $IniPath -Encoding utf8 -Force
     Write-Success "addon.ini file created"
 }
 
 function Copy-BundleFiles {
-    <#
-    .SYNOPSIS
-    Copies additional files from addon bundle
-    
-    .PARAMETER AddonName
-    Addon name
-    
-    .PARAMETER DestDir
-    Destination directory
-    #>
     param([string]$AddonName, [string]$DestDir)
-    
     $bundleSrc = "..\resources\addons\$AddonName"
-    
     if (Test-Path $bundleSrc) {
-        Write-Progress "COPYING" "Additional files from bundle"
-        
-        try {
-            Copy-Item -Path (Join-Path $bundleSrc "*") -Destination $DestDir -Recurse -Force
-            Write-Success "Additional files copied"
-        }
-        catch {
-            Write-Warning "Error copying additional files: $_"
-        }
+        Write-Stage "COPYING" "Additional files from bundle"
+        try { Copy-Item -Path (Join-Path $bundleSrc "*") -Destination $DestDir -Recurse -Force; Write-Success "Additional files copied" }
+        catch { Write-Warning "Error copying additional files: $_" }
     }
 }
 
+# ================== CLEANUP ADDONS ==================
 function Remove-UnnecessaryFiles {
-    <#
-    .SYNOPSIS
-    Removes unnecessary files and directories from addons
-    #>
-    
     Write-Host ""
-    # Patterns for excluded directories
     $excludePatterns = @("ErlangOTP*", "Ghostscript*")
-    
-    # Get excluded directories
-    $excludedDirs = foreach ($pattern in $excludePatterns) {
-        Get-ChildItem -Path $BaseAddonsDir -Directory -Filter $pattern
-    }
-
-    # Special cleanup for excluded directories
+    $excludedDirs = foreach ($pattern in $excludePatterns) { Get-ChildItem -Path $BaseAddonsDir -Directory -Filter $pattern }
     foreach ($excludedDir in $excludedDirs) {
-        Write-Progress "CLEANUP" "Special cleanup for $($excludedDir.Name)"
-        
-            Get-ChildItem -Path $excludedDir.FullName -Filter "*vc_redist.exe" -ErrorAction SilentlyContinue |
-                ForEach-Object {
-                    Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
-                    Write-Success "Removed file: $($_.Name)"
-                }
-
-        # Remove erts*\lib and erts*\include
-        Get-ChildItem -Path $excludedDir.FullName -Directory -Filter "erts*" -ErrorAction SilentlyContinue |
-            ForEach-Object {
-                $libPath = Join-Path $_.FullName "lib"
-                $includePath = Join-Path $_.FullName "include"
-                
-                if (Test-Path $libPath) {
-                    Remove-Item $libPath -Recurse -Force -ErrorAction SilentlyContinue
-                    Write-Success "Removed: $libPath"
-                }
-                
-                if (Test-Path $includePath) {
-                    Remove-Item $includePath -Recurse -Force -ErrorAction SilentlyContinue
-                    Write-Success "Removed: $includePath"
-                }
-            }
-        
-        # Clean usr\lib
+        Write-Stage "CLEANUP" "Special cleanup for $($excludedDir.Name)"
+        Get-ChildItem -Path $excludedDir.FullName -Filter "*vc_redist.exe" -ErrorAction SilentlyContinue |
+            ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue; Write-Success "Removed file: $($_.Name)" }
+        Get-ChildItem -Path $excludedDir.FullName -Directory -Filter "erts*" -ErrorAction SilentlyContinue | ForEach-Object {
+            $libPath = Join-Path $_.FullName "lib"
+            $includePath = Join-Path $_.FullName "include"
+            if (Test-Path $libPath) { Remove-Item $libPath -Recurse -Force -ErrorAction SilentlyContinue; Write-Success "Removed: $libPath" }
+            if (Test-Path $includePath) { Remove-Item $includePath -Recurse -Force -ErrorAction SilentlyContinue; Write-Success "Removed: $includePath" }
+        }
         $usrLibPath = Join-Path $excludedDir.FullName "usr\lib"
         if (Test-Path $usrLibPath) {
-            # Remove *.lib files
-            Get-ChildItem -Path $usrLibPath -Filter "*.lib" -ErrorAction SilentlyContinue |
-                ForEach-Object {
-                    Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
-                    Write-Success "Removed file: $($_.Name)"
-                }
-            
-            # Remove include folder
-            $usrLibIncludePath = Join-Path $usrLibPath "include"
-            if (Test-Path $usrLibIncludePath) {
-                Remove-Item $usrLibIncludePath -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed: $usrLibIncludePath"
+            Get-ChildItem -Path $usrLibPath -Filter "*.lib" -ErrorAction SilentlyContinue | ForEach-Object {
+                Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+                Write-Success "Removed file: $($_.Name)"
             }
+            $usrLibIncludePath = Join-Path $usrLibPath "include"
+            if (Test-Path $usrLibIncludePath) { Remove-Item $usrLibIncludePath -Recurse -Force -ErrorAction SilentlyContinue; Write-Success "Removed: $usrLibIncludePath" }
         }
-
-        # Clean lib\erl_interface*
         $mainLibPath = Join-Path $excludedDir.FullName "lib"
         if (Test-Path $mainLibPath) {
-            Get-ChildItem -Path $mainLibPath -Directory -Filter "erl_interface*" -ErrorAction SilentlyContinue |
-                ForEach-Object {
-                    $erlInterfaceIncludePath = Join-Path $_.FullName "include"
-                    $erlInterfaceLibPath = Join-Path $_.FullName "lib"
-                    
-                    if (Test-Path $erlInterfaceIncludePath) {
-                        Remove-Item $erlInterfaceIncludePath -Recurse -Force -ErrorAction SilentlyContinue
-                        Write-Success "Removed: $erlInterfaceIncludePath"
-                    }
-                    
-                    if (Test-Path $erlInterfaceLibPath) {
-                        Remove-Item $erlInterfaceLibPath -Recurse -Force -ErrorAction SilentlyContinue
-                        Write-Success "Removed: $erlInterfaceLibPath"
-                    }
-                }
+            Get-ChildItem -Path $mainLibPath -Directory -Filter "erl_interface*" -ErrorAction SilentlyContinue | ForEach-Object {
+                $erlInterfaceIncludePath = Join-Path $_.FullName "include"
+                $erlInterfaceLibPath = Join-Path $_.FullName "lib"
+                if (Test-Path $erlInterfaceIncludePath) { Remove-Item $erlInterfaceIncludePath -Recurse -Force -ErrorAction SilentlyContinue; Write-Success "Removed: $erlInterfaceIncludePath" }
+                if (Test-Path $erlInterfaceLibPath) { Remove-Item $erlInterfaceLibPath -Recurse -Force -ErrorAction SilentlyContinue; Write-Success "Removed: $erlInterfaceLibPath" }
+            }
         }
     }
 
-    # General cleanup for other addons
     $cleanedDirs = 0
     Get-ChildItem -Path $BaseAddonsDir -Directory |
-        Where-Object { 
+        Where-Object {
             $dirName = $_.Name
             $isExcluded = $false
-            foreach ($pattern in $excludePatterns) {
-                if ($dirName -like $pattern) {
-                    $isExcluded = $true
-                    break
-                }
-            }
+            foreach ($pattern in $excludePatterns) { if ($dirName -like $pattern) { $isExcluded = $true; break } }
             -not $isExcluded
         } |
         ForEach-Object {
             $addonPath = $_.FullName
             $addonName = $_.Name
-            
-            Write-Progress "CLEANUP" "General cleanup for $addonName"
-            
-            # Remove standard directories
-            @("include", "headers", "lib") | ForEach-Object {
-                $targetPath = Join-Path $addonPath $_
-                if (Test-Path $targetPath) {
-                    Remove-Item $targetPath -Recurse -Force -ErrorAction SilentlyContinue
-                    Write-Success "Removed directory: $_"
-                }
-            }
-            
-            # Remove unnecessary files
-            $filesRemoved = 0
-            @("*.pdb", "db2level.txt", "uidrvci.txt", "odbc_install.txt", "adrci.txt", "vc_redist.exe", "install.cmd") | ForEach-Object {
-                $filesToRemove = Get-ChildItem -Path $addonPath -Filter $_ -Recurse -ErrorAction SilentlyContinue
-                foreach ($file in $filesToRemove) {
-                    Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-                    $filesRemoved++
-                }
-            }
-            
-            if ($filesRemoved -gt 0) {
-                Write-Success "Removed $filesRemoved unnecessary files"
-            }
-            
+            Write-Stage "CLEANUP" "General cleanup for $addonName"
+            [void](Remove-DirectoriesIfExists -Base $addonPath -Dirs @("include", "headers", "lib"))
+            $filesRemoved = Remove-FilesByPatterns -Base $addonPath -Patterns @("*.pdb", "db2level.txt", "uidrvci.txt", "odbc_install.txt", "adrci.txt", "vc_redist.exe", "install.cmd") -Recurse
+            if ($filesRemoved -gt 0) { Write-Success "Removed $filesRemoved unnecessary files" }
             $cleanedDirs++
         }
 
-    # Remove empty help files
-    $emptyHelpFiles = Get-ChildItem -Path "$BaseAddonsDir\*\ospanel_data\help\*" -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Length -eq 0 }
-    
+    $emptyHelpFiles = Get-ChildItem -Path "$BaseAddonsDir\*\ospanel_data\help\*" -File -ErrorAction SilentlyContinue | Where-Object { $_.Length -eq 0 }
     if ($emptyHelpFiles) {
-        $emptyHelpFiles | ForEach-Object {
-            Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
-        }
+        $emptyHelpFiles | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
         Write-Success "Removed $($emptyHelpFiles.Count) empty help files"
     }
-
     Write-Success "Cleanup completed. Processed $cleanedDirs directories"
 }
 
-# ================== UTILITY FUNCTIONS ==================
-
+# ================== BIN/TOOLS HELPERS ==================
 function Find-FileInExtracted {
-    <#
-    .SYNOPSIS
-    Search for files in extracted utility archive
-    
-    .PARAMETER BasePath
-    Base path for search
-    
-    .PARAMETER Pattern
-    File search pattern
-    #>
-    param(
-        [string]$BasePath,
-        [string]$Pattern
-    )
-    
-    $found = Get-ChildItem -Path $BasePath -Recurse -File -ErrorAction SilentlyContinue | 
+    param([string]$BasePath, [string]$Pattern)
+    $found = Get-ChildItem -Path $BasePath -Recurse -File -ErrorAction SilentlyContinue |
              Where-Object { $_.Name -like ($Pattern -split '\\')[-1] } |
              Select-Object -First 1
-    
     return $found.FullName
 }
 
 function Install-ToolFromArchive {
-    <#
-    .SYNOPSIS
-    Installs utility from archive
-    
-    .PARAMETER Url
-    URL for downloading archive
-    
-    .PARAMETER ExtractPath
-    Extraction path in archive
-    
-    .PARAMETER Files
-    List of files to copy
-    
-    .PARAMETER CopyFiles
-    Additional files to copy
-    #>
-    param(
-        [string]$Url,
-        [string]$ExtractPath,
-        [array]$Files,
-        [array]$CopyFiles = @()
-    )
-    
+    param([string]$Url, [string]$ExtractPath, [array]$Files, [array]$CopyFiles = @())
     $tmp = "$env:TEMP\tmpdir_$(Get-Random)"
     $zip = "$tmp.zip"
-    
-    Write-Progress "DOWNLOAD" "Downloading archive" $Url
-    
-    if ($UseProxy) {
-        & curl --socks5 $ProxyUrl -L -o $zip $Url 2>$null
-    } else {
-        Invoke-WebRequest $Url -OutFile $zip
-    }
-    
+    Write-Stage "DOWNLOAD" "Downloading archive" $Url
+    if ($UseProxy) { & curl --socks5 $ProxyUrl -L -o $zip $Url 2>$null } else { Invoke-WebRequest $Url -OutFile $zip }
     Expand-Archive $zip $tmp -Force
-    
-    # Copy main files
+
     foreach ($file in $Files) {
         $sourceFile = $null
-        
         if ([string]::IsNullOrEmpty($ExtractPath)) {
-            # Files in archive root
             $sourceFile = "$tmp\$file"
-        }
-        else {
-            # Search in specified directory with mask support
+        } else {
             $searchPaths = Get-ChildItem -Path $tmp -Directory | Where-Object { $_.Name -like ($ExtractPath -replace '\\.*$', '') }
-            
             if ($ExtractPath.Contains('\')) {
-                # Has subpaths
                 $subPath = $ExtractPath -replace '^[^\\]*\\', ''
                 foreach ($basePath in $searchPaths) {
                     $fullPath = Join-Path $basePath.FullName $subPath
                     $testFile = Join-Path $fullPath $file
-                    if (Test-Path $testFile -PathType Leaf) {
-                        $sourceFile = $testFile
-                        break
-                    }
+                    if (Test-Path $testFile -PathType Leaf) { $sourceFile = $testFile; break }
                 }
-            }
-            else {
-                # Only base directory
+            } else {
                 foreach ($basePath in $searchPaths) {
                     $testFile = Join-Path $basePath.FullName $file
-                    if (Test-Path $testFile -PathType Leaf) {
-                        $sourceFile = $testFile
-                        break
-                    }
+                    if (Test-Path $testFile -PathType Leaf) { $sourceFile = $testFile; break }
                 }
             }
         }
-        
         if ($sourceFile -and (Test-Path $sourceFile -PathType Leaf)) {
-            Write-Progress "COPYING" "File $file"
+            Write-Stage "COPYING" "File $file"
             Copy-Item $sourceFile "$BaseBinDir\$file" -Force
             Write-Success "Copied: $sourceFile → $BaseBinDir\$file"
-        }
-        else {
+        } else {
             Write-Warning "File not found: $file (searched in $ExtractPath)"
         }
     }
-    
-    # Copy additional files
+
     foreach ($copyFile in $CopyFiles) {
         if (Test-Path $copyFile -PathType Leaf) {
             $fileName = Split-Path $copyFile -Leaf
-            Write-Progress "COPYING" "Additional file $fileName"
+            Write-Stage "COPYING" "Additional file $fileName"
             Copy-Item $copyFile "$BaseBinDir\$fileName" -Force
             Write-Success "Copied additional file: $copyFile"
         }
     }
-    
     Remove-Item $tmp, $zip -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 function Install-DirectDownload {
-    <#
-    .SYNOPSIS
-    Direct download of utility file
-    
-    .PARAMETER Url
-    URL for download
-    
-    .PARAMETER TargetName
-    Target file name
-    #>
-    param(
-        [string]$Url,
-        [string]$TargetName
-    )
-    
-    Write-Progress "DOWNLOAD" "Direct downloading" $Url
-    
-    if ($UseProxy) {
-        & curl --socks5 $ProxyUrl -L -o "$BaseBinDir\$TargetName" $Url 2>$null
-    } else {
-        & curl -L -o "$BaseBinDir\$TargetName" $Url 2>$null
-    }
-    
+    param([string]$Url, [string]$TargetName)
+    Write-Stage "DOWNLOAD" "Direct downloading" $Url
+    Invoke-Curl -Url $Url -OutFile "$BaseBinDir\$TargetName" -Silent -Follow
     Write-Success "File downloaded: $BaseBinDir\$TargetName"
 }
 
 function Install-FromLocalArchive {
-    <#
-    .SYNOPSIS
-    Install utility from local archive
-    
-    .PARAMETER LocalZip
-    Path to local archive
-    
-    .PARAMETER Files
-    List of files to extract
-    #>
-    param(
-        [string]$LocalZip,
-        [array]$Files
-    )
-    
+    param([string]$LocalZip, [array]$Files)
     $tmp = "$env:TEMP\tmpdir_$(Get-Random)"
-    
-    Write-Progress "EXTRACTION" "Local archive" $LocalZip
+    Write-Stage "EXTRACTION" "Local archive" $LocalZip
     Expand-Archive $LocalZip $tmp -Force
-    
     foreach ($file in $Files) {
-        $sourceFile = Get-ChildItem -Path $tmp -Recurse -File | 
-                     Where-Object { $_.Name -eq $file } | 
-                     Select-Object -First 1
-        
+        $sourceFile = Get-ChildItem -Path $tmp -Recurse -File | Where-Object { $_.Name -eq $file } | Select-Object -First 1
         if ($sourceFile) {
-            Write-Progress "COPYING" "File $file"
+            Write-Stage "COPYING" "File $file"
             Copy-Item $sourceFile.FullName "$BaseBinDir\$file" -Force
             Write-Success "Copied: $($sourceFile.FullName) → $BaseBinDir\$file"
-        }
-        else {
+        } else {
             Write-Warning "File not found in archive: $file"
         }
     }
-    
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 function Install-LocalFiles {
-    <#
-    .SYNOPSIS
-    Copy local utility files
-    
-    .PARAMETER LocalFiles
-    List of local files to copy
-    #>
-    param(
-        [array]$LocalFiles
-    )
-    
+    param([array]$LocalFiles)
     foreach ($file in $LocalFiles) {
         if (Test-Path $file -PathType Leaf) {
             $fileName = Split-Path $file -Leaf
-            Write-Progress "COPYING" "Local file $fileName"
+            Write-Stage "COPYING" "Local file $fileName"
             Copy-Item $file "$BaseBinDir\$fileName" -Force
             Write-Success "Copied local file: $file → $BaseBinDir\$fileName"
-        }
-        else {
+        } else {
             Write-Warning "Local file not found: $file"
         }
     }
 }
 
 function Generate-ToolHelp {
-    <#
-    .SYNOPSIS
-    Generates help files for utilities
-    
-    .PARAMETER Command
-    Command and arguments for help generation
-    
-    .PARAMETER OutputFile
-    Output file name (auto-generated by default)
-    #>
-    param(
-        [array]$Command,
-        [string]$OutputFile = $null
-    )
-    
-    if (-not $OutputFile) {
-        $OutputFile = "$($Command[0] -replace '\.exe$', '').txt"
-    }
-    
+    param([array]$Command, [string]$OutputFile = $null)
+    if (-not $OutputFile) { $OutputFile = "$($Command[0] -replace '\.exe$', '').txt" }
     $helpPath = "$BaseBinDir\help\$OutputFile"
     $execPath = "$BaseBinDir\$($Command[0])"
-    
-    if (-not (Test-Path $execPath -PathType Leaf)) {
-        Write-Warning "Executable not found for help generation: $execPath"
-        return
-    }
-    
-    Write-Progress "HELP" "Generating help for $($Command[0])"
-    
+    if (-not (Test-Path $execPath -PathType Leaf)) { Write-Warning "Executable not found for help generation: $execPath"; return }
+    Write-Stage "HELP" "Generating help for $($Command[0])"
     try {
         $out = & $execPath $Command[1..($Command.Length-1)] 2>&1 | Where-Object {$_.ToString().Trim()}
         $out | Out-File $helpPath -Encoding utf8 -Force
         Write-Success "Help created: $OutputFile"
-    } catch {
-        Write-Warning "Error generating help for $($Command[0]): $_"
-    }
-}
-
-function Ensure-Directory {
-    <#
-    .SYNOPSIS
-    Creates directory if it doesn't exist, ensuring parent directories are created
-    
-    .PARAMETER FilePath
-    Path to file (directory will be created for this file)
-    #>
-    param([string]$FilePath)
-    
-    $directory = Split-Path -Path $FilePath -Parent
-    if ($directory -and -not (Test-Path $directory)) {
-        New-Item -ItemType Directory -Path $directory -Force | Out-Null
-    }
+    } catch { Write-Warning "Error generating help for $($Command[0]): $_" }
 }
 
 function Copy-ComposerFiles {
-    <#
-    .SYNOPSIS
-    Downloads and copies Composer files and keys to PHP modules
-    #>
-    
     Write-Host ""
-    
-    Write-PhpProgress "COMPOSER" "Downloading Composer and keys"
-    
-    # Define source files
+    Write-Stage "COMPOSER" "Downloading Composer and keys"
     $sources = @{
         "composer.phar" = "..\resources\composer\composer.phar"
         "config.json" = "..\resources\composer\config.json"
@@ -1209,138 +725,65 @@ function Copy-ComposerFiles {
         "keys.dev.pub" = "..\resources\composer\keys.dev.pub"
         "composer.bat" = "..\resources\composer\composer.bat"
     }
-    
-    # Create source directory if it doesn't exist
     $sourceDir = "..\resources\composer"
-    if (-not (Test-Path $sourceDir)) {
-        New-Item -ItemType Directory -Path $sourceDir -Force | Out-Null
-    }
-    
-    # Remove old files before downloading/updating
-    $filesToDownload = @("composer.phar", "keys.tags.pub", "keys.dev.pub")
-    foreach ($file in $filesToDownload) {
+    if (-not (Test-Path $sourceDir)) { New-Item -ItemType Directory -Path $sourceDir -Force | Out-Null }
+    foreach ($file in @("composer.phar", "keys.tags.pub", "keys.dev.pub")) {
         $filePath = $sources[$file]
-        if (Test-Path $filePath) {
-            Remove-Item $filePath -Force -ErrorAction SilentlyContinue
-            Write-Success "Removed old file: $file"
-        }
+        if (Test-Path $filePath) { Remove-Item $filePath -Force -ErrorAction SilentlyContinue; Write-Success "Removed old file: $file" }
     }
-    
-    # Download files (always overwrite)
     $downloads = @{
         "https://composer.github.io/snapshots.pub" = $sources["keys.dev.pub"]
-        "https://composer.github.io/releases.pub" = $sources["keys.tags.pub"]
+        "https://composer.github.io/releases.pub"  = $sources["keys.tags.pub"]
         "https://getcomposer.org/download/latest-stable/composer.phar" = $sources["composer.phar"]
     }
-    
     foreach ($url in $downloads.Keys) {
         $destPath = $downloads[$url]
-        Write-PhpProgress "COMPOSER" "Downloading $(Split-Path $destPath -Leaf)" $url
-        
+        Write-Stage "COMPOSER" "Downloading $(Split-Path $destPath -Leaf)" $url
         try {
-            if ($UseProxy) {
-                & curl --socks5 $ProxyUrl -f -s -L -o $destPath $url 2>$null
-            } else {
-                & curl -f -s -L -o $destPath $url 2>$null
-            }
-            
-            if (Test-Path $destPath) {
-                Write-Success "Downloaded: $(Split-Path $destPath -Leaf)"
-            } else {
-                Write-Warning "Failed to download: $(Split-Path $destPath -Leaf)"
-            }
-        }
-        catch {
-            Write-Warning "Error downloading $(Split-Path $destPath -Leaf): $_"
-        }
+            Invoke-Curl -Url $url -OutFile $destPath -Fail -Silent -Follow
+            if (Test-Path $destPath) { Write-Success "Downloaded: $(Split-Path $destPath -Leaf)" }
+            else { Write-Warning "Failed to download: $(Split-Path $destPath -Leaf)" }
+        } catch { Write-Warning "Error downloading $(Split-Path $destPath -Leaf): $_" }
     }
-    
-    # Check for all required files
     $missingFiles = @()
-    foreach ($file in $sources.Keys) {
-        if (-not (Test-Path $sources[$file])) {
-            $missingFiles += $file
-        }
-    }
-    
-    if ($missingFiles.Count -gt 0) {
-        Write-Error "Missing files: $($missingFiles -join ', ')"
-        return $false
-    }
-    
+    foreach ($file in $sources.Keys) { if (-not (Test-Path $sources[$file])) { $missingFiles += $file } }
+    if ($missingFiles.Count -gt 0) { Write-Error "Missing files: $($missingFiles -join ', ')"; return $false }
     Write-Success "All Composer files verified"
-    
-    # Define files that go to composer subfolder vs PHP root
+
     $composerSubfolderFiles = @("composer.phar", "config.json", "composer.json", "auth.json", "keys.tags.pub", "keys.dev.pub")
     $phpRootFiles = @("composer.bat")
-    
-    # Copy files to PHP modules with forced overwrite
     $phpVersions = @("7.2", "7.3", "7.4", "8.0", "8.1", "8.2", "8.3", "8.4")
-    
+
     foreach ($version in $phpVersions) {
         $phpModuleDir = "..\modules\PHP-$version"
         $composerTargetDir = "$phpModuleDir\ospanel_data\default_data\composer"
-        
         if (Test-Path $phpModuleDir) {
-            Write-PhpProgress "COMPOSER" "Copying files to PHP $version"
-            
-            # Copy files to composer subfolder
+            Write-Stage "COMPOSER" "Copying files to PHP $version"
             if (Test-Path $composerTargetDir) {
                 foreach ($file in $composerSubfolderFiles) {
                     $sourcePath = $sources[$file]
                     $targetPath = Join-Path $composerTargetDir $file
-                    
-                    # Remove old file in target directory
-                    if (Test-Path $targetPath) {
-                        Remove-Item $targetPath -Force -ErrorAction SilentlyContinue
-                    }
-                    
-                    try {
-                        Copy-Item $sourcePath $targetPath -Force
-                        Write-Success "Copied $file to PHP $version composer folder"
-                    }
-                    catch {
-                        Write-Warning "Error copying $file to PHP $version composer folder: $_"
-                    }
+                    if (Test-Path $targetPath) { Remove-Item $targetPath -Force -ErrorAction SilentlyContinue }
+                    try { Copy-Item $sourcePath $targetPath -Force; Write-Success "Copied $file to PHP $version composer folder" }
+                    catch { Write-Warning "Error copying $file to PHP $version composer folder: $_" }
                 }
             }
-            
-            # Copy files to PHP module root
             foreach ($file in $phpRootFiles) {
                 $sourcePath = $sources[$file]
                 $targetPath = Join-Path $phpModuleDir $file
-                
-                # Remove old file in target directory
-                if (Test-Path $targetPath) {
-                    Remove-Item $targetPath -Force -ErrorAction SilentlyContinue
-                }
-                
-                try {
-                    Copy-Item $sourcePath $targetPath -Force
-                    Write-Success "Copied $file to PHP $version root"
-                }
-                catch {
-                    Write-Warning "Error copying $file to PHP $version root: $_"
-                }
+                if (Test-Path $targetPath) { Remove-Item $targetPath -Force -ErrorAction SilentlyContinue }
+                try { Copy-Item $sourcePath $targetPath -Force; Write-Success "Copied $file to PHP $version root" }
+                catch { Write-Warning "Error copying $file to PHP $version root: $_" }
             }
-        }
-        else {
+        } else {
             Write-Warning "PHP module directory not found: $phpModuleDir"
         }
     }
-    
     Write-Success "Composer files copy operation completed"
 }
 
 function Copy-AdditionalFiles {
-    <#
-    .SYNOPSIS
-    Downloads and copies additional system files
-    #>
-    
     Write-Host ""
-    
-    # Download files with guaranteed overwrite
     $downloads = @{
         "https://curl.se/ca/cacert.pem" = @(
             "..\system\ssl\cacert.pem",
@@ -1349,39 +792,17 @@ function Copy-AdditionalFiles {
             "..\addons\Perl\perl\vendor\lib\Mozilla\CA\cacert.pem"
         )
     }
-    
     foreach ($url in $downloads.Keys) {
         foreach ($destPath in $downloads[$url]) {
-            Write-PhpProgress "ADDITIONAL" "Downloading $(Split-Path $destPath -Leaf)" $url
-            
-            # Ensure directory exists
-            Ensure-Directory $destPath
-            
-            # Remove existing file
-            if (Test-Path $destPath) {
-                Remove-Item $destPath -Force
-            }
-            
+            Write-Stage "ADDITIONAL" "Downloading $(Split-Path $destPath -Leaf)" $url
+            Ensure-ParentDirectory $destPath
+            if (Test-Path $destPath) { Remove-Item $destPath -Force }
             try {
-                if ($UseProxy) {
-                    & curl --socks5 $ProxyUrl -f -s -L -o $destPath $url 2>$null
-                } else {
-                    & curl -f -s -L -o $destPath $url 2>$null
-                }
-                
-                if (Test-Path $destPath) {
-                    Write-Success "Downloaded: $destPath"
-                } else {
-                    Write-Warning "Failed to download: $destPath"
-                }
-            }
-            catch {
-                Write-Warning "Error downloading to $destPath : $_"
-            }
+                Invoke-Curl -Url $url -OutFile $destPath -Fail -Silent -Follow
+                if (Test-Path $destPath) { Write-Success "Downloaded: $destPath" } else { Write-Warning "Failed to download: $destPath" }
+            } catch { Write-Warning "Error downloading to $destPath : $_" }
         }
     }
-    
-    # Copy local file with overwrite
     $localCopies = @{
         "..\..\OSPSource\Win64\Release\OpenServerPanel.exe" = "..\bin\ospanel.exe"
         "..\resources\dist\README.txt" = "..\user\geo\README.txt"
@@ -1390,103 +811,61 @@ function Copy-AdditionalFiles {
         "..\bin\libcurl-x64.dll" = "..\system\bin\libcurl-x64.dll"
         "..\bin\fd.exe" = "..\system\bin\fd.exe"
     }
-    
     foreach ($sourcePath in $localCopies.Keys) {
         $destPath = $localCopies[$sourcePath]
-        
         if (Test-Path $sourcePath) {
-            Write-PhpProgress "ADDITIONAL" "Copying local file $(Split-Path $sourcePath -Leaf)"
-            
-            # Ensure directory exists
-            Ensure-Directory $destPath
-            
-            try {
-                Copy-Item $sourcePath $destPath -Force
-                Write-Success "Copied: $sourcePath → $destPath"
-            }
-            catch {
-                Write-Warning "Error copying $sourcePath to $destPath : $_"
-            }
-        }
-        else {
+            Write-Stage "ADDITIONAL" "Copying local file $(Split-Path $sourcePath -Leaf)"
+            Ensure-ParentDirectory $destPath
+            try { Copy-Item $sourcePath $destPath -Force; Write-Success "Copied: $sourcePath → $destPath" }
+            catch { Write-Warning "Error copying $sourcePath to $destPath : $_" }
+        } else {
             Write-Warning "Source file not found: $sourcePath"
         }
     }
-    
     Write-Success "Additional files copy operation completed"
 }
 
+# ================== SUMMARY ==================
 function Show-Summary {
-    <#
-    .SYNOPSIS
-    Displays final execution statistics
-    #>
-    
     Write-Host ""
     Write-Host "📊 Addon processing results:" -ForegroundColor White
     Write-Host ""
-    Write-Host "   Total addons:       " -NoNewline -ForegroundColor Gray
-    Write-Host $script:TotalAddons -ForegroundColor White
-    Write-Host "   Processed:          " -NoNewline -ForegroundColor Gray
-    Write-Host $script:ProcessedAddons -ForegroundColor Green
-    Write-Host "   Skipped:            " -NoNewline -ForegroundColor Gray
-    Write-Host $script:SkippedAddons -ForegroundColor Yellow
-    Write-Host "   Errors:             " -NoNewline -ForegroundColor Gray
-    Write-Host $script:FailedAddons -ForegroundColor Red
+    Write-Host "   Total addons:       " -NoNewline -ForegroundColor Gray; Write-Host $script:TotalAddons -ForegroundColor White
+    Write-Host "   Processed:          " -NoNewline -ForegroundColor Gray; Write-Host $script:ProcessedAddons -ForegroundColor Green
+    Write-Host "   Skipped:            " -NoNewline -ForegroundColor Gray; Write-Host $script:SkippedAddons -ForegroundColor Yellow
+    Write-Host "   Errors:             " -NoNewline -ForegroundColor Gray; Write-Host $script:FailedAddons -ForegroundColor Red
     Write-Host ""
-    
     $addonSuccessRate = if ($script:TotalAddons -gt 0) { [math]::Round(($script:ProcessedAddons / $script:TotalAddons) * 100, 1) } else { 0 }
     Write-Host "   Addon success rate: " -NoNewline -ForegroundColor Gray
     Write-Host "$addonSuccessRate%" -ForegroundColor $(if ($addonSuccessRate -ge 90) { "Green" } elseif ($addonSuccessRate -ge 70) { "Yellow" } else { "Red" })
     Write-Host ""
-    
     Write-Host "🔧 Module processing results:" -ForegroundColor White
     Write-Host ""
-    Write-Host "   Total modules:      " -NoNewline -ForegroundColor Gray
-    Write-Host $script:TotalModules -ForegroundColor White
-    Write-Host "   Processed:          " -NoNewline -ForegroundColor Gray
-    Write-Host $script:ProcessedModules -ForegroundColor Green
-    Write-Host "   Skipped:            " -NoNewline -ForegroundColor Gray
-    Write-Host $script:SkippedModules -ForegroundColor Yellow
-    Write-Host "   Errors:             " -NoNewline -ForegroundColor Gray
-    Write-Host $script:FailedModules -ForegroundColor Red
+    Write-Host "   Total modules:      " -NoNewline -ForegroundColor Gray; Write-Host $script:TotalModules -ForegroundColor White
+    Write-Host "   Processed:          " -NoNewline -ForegroundColor Gray; Write-Host $script:ProcessedModules -ForegroundColor Green
+    Write-Host "   Skipped:            " -NoNewline -ForegroundColor Gray; Write-Host $script:SkippedModules -ForegroundColor Yellow
+    Write-Host "   Errors:             " -NoNewline -ForegroundColor Gray; Write-Host $script:FailedModules -ForegroundColor Red
     Write-Host ""
-
     $moduleSuccessRate = if ($script:TotalModules -gt 0) { [math]::Round(($script:ProcessedModules / $script:TotalModules) * 100, 1) } else { 0 }
     Write-Host "   Module success rate: " -NoNewline -ForegroundColor Gray
     Write-Host "$moduleSuccessRate%" -ForegroundColor $(if ($moduleSuccessRate -ge 90) { "Green" } elseif ($moduleSuccessRate -ge 70) { "Yellow" } else { "Red" })
     Write-Host ""
-
     Write-Host "🛠️  Utility processing results:" -ForegroundColor White
     Write-Host ""
-    Write-Host "   Total utilities:    " -NoNewline -ForegroundColor Gray
-    Write-Host $script:TotalTools -ForegroundColor White
-    Write-Host "   Installed:          " -NoNewline -ForegroundColor Gray
-    Write-Host $script:ProcessedTools -ForegroundColor Green
-    Write-Host "   Skipped:            " -NoNewline -ForegroundColor Gray
-    Write-Host $script:SkippedTools -ForegroundColor Yellow
-    Write-Host "   Errors:             " -NoNewline -ForegroundColor Gray
-    Write-Host $script:FailedTools -ForegroundColor Red
+    Write-Host "   Total utilities:    " -NoNewline -ForegroundColor Gray; Write-Host $script:TotalTools -ForegroundColor White
+    Write-Host "   Installed:          " -NoNewline -ForegroundColor Gray; Write-Host $script:ProcessedTools -ForegroundColor Green
+    Write-Host "   Skipped:            " -NoNewline -ForegroundColor Gray; Write-Host $script:SkippedTools -ForegroundColor Yellow
+    Write-Host "   Errors:             " -NoNewline -ForegroundColor Gray; Write-Host $script:FailedTools -ForegroundColor Red
     Write-Host ""
-
     $toolSuccessRate = if ($script:TotalTools -gt 0) { [math]::Round(($script:ProcessedTools / $script:TotalTools) * 100, 1) } else { 0 }
     Write-Host "   Utility success rate: " -NoNewline -ForegroundColor Gray
     Write-Host "$toolSuccessRate%" -ForegroundColor $(if ($toolSuccessRate -ge 90) { "Green" } elseif ($toolSuccessRate -ge 70) { "Yellow" } else { "Red" })
     Write-Host ""
 }
 
-# ================== MODULE PROCESSING FUNCTIONS ==================
-
+# ================== MODULE PROCESSING ==================
 function Get-ModuleType {
-    <#
-    .SYNOPSIS
-    Determines module type by name
-
-    .PARAMETER ModuleName
-    Module name
-    #>
     param([string]$ModuleName)
-
     $types = @{
         "Apache*" = "Apache"
         "Bind*" = "Bind"
@@ -1503,2019 +882,628 @@ function Get-ModuleType {
         "Smtp4dev*" = "Smtp4dev"
         "Unbound*" = "Unbound"
     }
-
-    foreach ($pattern in $types.Keys) {
-        if ($ModuleName -like $pattern) {
-            return $types[$pattern]
-        }
-    }
-
+    foreach ($pattern in $types.Keys) { if ($ModuleName -like $pattern) { return $types[$pattern] } }
     return "Unknown"
 }
 
-function Process-ApacheModule {
-    <#
-    .SYNOPSIS
-    Processes Apache-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-ApacheModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "APACHE-PROCESSING" "Processing Apache module"
-
-        # Create temporary directory
-        $tmpDir = "$env:TEMP\apache_$(Get-Random)"
-
-        # Extract to temporary directory
-        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-
-        # Find Apache directory (usually Apache24 or similar)
-        $apacheDir = Get-ChildItem -Path $tmpDir -Directory |
-                     Where-Object { $_.Name -like "Apache*" } |
-                     Select-Object -First 1
-
-        if ($apacheDir) {
-            # Move contents from Apache subfolder to module root
-            Get-ChildItem -Path $apacheDir.FullName | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Moved files from $($apacheDir.Name) to module root"
-        } else {
-            # Extract directly if no Apache subfolder found
-            Get-ChildItem -Path $tmpDir | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Files moved directly to module root"
-        }
-
-        # Clean up specific Apache files and directories
-        Write-Progress "APACHE-PROCESSING" "Cleaning up unnecessary Apache files"
-
-        # Remove ApacheMonitor.exe from bin directory
+        Write-Stage "APACHE-PROCESSING" "Processing Apache module"
+        if (-not (Extract-MoveFromSubfolder -ZipPath $ZipPath -DestDir $DestDir -Filter "Apache*")) { throw "extract failed" }
+        Write-Stage "APACHE-PROCESSING" "Cleaning up unnecessary Apache files"
         $apacheMonitorPath = Join-Path $DestDir "bin\ApacheMonitor.exe"
-        if (Test-Path $apacheMonitorPath) {
-            Remove-Item $apacheMonitorPath -Force -ErrorAction SilentlyContinue
-            Write-Success "Removed ApacheMonitor.exe"
-        }
-
-        # Remove unnecessary directories
-        $dirsToRemove = @("htdocs", "lib", "include", "manual", "logs")
-        $removedDirs = 0
-
-        foreach ($dir in $dirsToRemove) {
-            $dirPath = Join-Path $DestDir $dir
-            if (Test-Path $dirPath) {
-                Remove-Item $dirPath -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed directory: $dir"
-                $removedDirs++
-            }
-        }
-
-        if ($removedDirs -gt 0) {
-            Write-Success "Cleaned up $removedDirs unnecessary directories"
-        }
-
-        # Clean up conf directory - keep only specific files
+        if (Test-Path $apacheMonitorPath) { Remove-Item $apacheMonitorPath -Force -ErrorAction SilentlyContinue; Write-Success "Removed ApacheMonitor.exe" }
+        [void](Remove-DirectoriesIfExists -Base $DestDir -Dirs @("htdocs", "lib", "include", "manual", "logs"))
         $confDir = Join-Path $DestDir "conf"
         if (Test-Path $confDir) {
-            Write-Progress "APACHE-PROCESSING" "Cleaning up conf directory"
-
+            Write-Stage "APACHE-PROCESSING" "Cleaning up conf directory"
             $filesToKeep = @("charset.conv", "magic", "openssl.cnf")
             $allConfFiles = Get-ChildItem -Path $confDir -File -ErrorAction SilentlyContinue
             $removedConfFiles = 0
-
             foreach ($file in $allConfFiles) {
-                if ($file.Name -notin $filesToKeep) {
-                    Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-                    $removedConfFiles++
-                }
+                if ($file.Name -notin $filesToKeep) { Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue; $removedConfFiles++ }
             }
-
-            # Remove all subdirectories in conf
             $confSubDirs = Get-ChildItem -Path $confDir -Directory -ErrorAction SilentlyContinue
-            foreach ($subDir in $confSubDirs) {
-                Remove-Item $subDir.FullName -Recurse -Force -ErrorAction SilentlyContinue
-                $removedConfFiles++
-            }
-
-            if ($removedConfFiles -gt 0) {
-                Write-Success "Cleaned up $removedConfFiles items from conf directory"
-            }
+            foreach ($subDir in $confSubDirs) { Remove-Item $subDir.FullName -Recurse -Force -ErrorAction SilentlyContinue; $removedConfFiles++ }
+            if ($removedConfFiles -gt 0) { Write-Success "Cleaned up $removedConfFiles items from conf directory" }
         }
-
-        # Clean up temporary directory
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-
-        Write-Success "Apache module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing Apache module: $_"
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-        return $false
-    }
+        Write-Success "Apache module processing completed"; return $true
+    } catch { Write-Error "Error processing Apache module: $_"; return $false }
 }
 
-function Process-BindModule {
-    <#
-    .SYNOPSIS
-    Processes Bind-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-BindModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "BIND-PROCESSING" "Processing Bind module"
-
-        # Standard extraction
+        Write-Stage "BIND-PROCESSING" "Processing Bind module"
         Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
-
-        # Clean up specific Bind files
-        Write-Progress "BIND-PROCESSING" "Cleaning up unnecessary Bind files"
-
-        $filesToRemove = @("BINDInstall.exe", "vcredist_x64.exe")
-        $removedFiles = 0
-
-        foreach ($file in $filesToRemove) {
+        Write-Stage "BIND-PROCESSING" "Cleaning up unnecessary Bind files"
+        foreach ($file in @("BINDInstall.exe", "vcredist_x64.exe")) {
             $filePath = Join-Path $DestDir $file
-            if (Test-Path $filePath) {
-                Remove-Item $filePath -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed file: $file"
-                $removedFiles++
-            }
+            if (Test-Path $filePath) { Remove-Item $filePath -Force -ErrorAction SilentlyContinue; Write-Success "Removed file: $file" }
         }
-
-        if ($removedFiles -gt 0) {
-            Write-Success "Cleaned up $removedFiles unnecessary files"
-        }
-
-        Write-Success "Bind module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing Bind module: $_"
-        return $false
-    }
+        Write-Success "Bind module processing completed"; return $true
+    } catch { Write-Error "Error processing Bind module: $_"; return $false }
 }
 
-function Process-MailpitModule {
-    <#
-    .SYNOPSIS
-    Processes Mailpit-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
-    try {
-        Write-Progress "MAILPIT-PROCESSING" "Processing Mailpit module"
-
-        # Standard extraction for now
-        Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
-
-        Write-Success "Mailpit module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing Mailpit module: $_"
-        return $false
-    }
+function Process-MailpitModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
+    try { Write-Stage "MAILPIT-PROCESSING" "Processing Mailpit module"; Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force; Write-Success "Mailpit module processing completed"; return $true }
+    catch { Write-Error "Error processing Mailpit module: $_"; return $false }
 }
 
-function Process-MariaDBModule {
-    <#
-    .SYNOPSIS
-    Processes MariaDB-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-MariaDBModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "MARIADB-PROCESSING" "Processing MariaDB module"
-
-        # Create temporary directory
-        $tmpDir = "$env:TEMP\mariadb_$(Get-Random)"
-
-        # Extract to temporary directory
-        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-
-        # Find MariaDB directory (usually mariadb-* or similar)
-        $mariadbDir = Get-ChildItem -Path $tmpDir -Directory |
-                      Where-Object { $_.Name -like "mariadb*" } |
-                      Select-Object -First 1
-
-        if ($mariadbDir) {
-            # Move contents from MariaDB subfolder to module root
-            Get-ChildItem -Path $mariadbDir.FullName | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Moved files from $($mariadbDir.Name) to module root"
-        } else {
-            # Extract directly if no MariaDB subfolder found
-            Get-ChildItem -Path $tmpDir | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Files moved directly to module root"
-        }
-
-        # Clean up specific MariaDB files and directories
-        Write-Progress "MARIADB-PROCESSING" "Cleaning up unnecessary MariaDB files"
-
-        # Remove *.lib and *.pdb files from lib directory
+        Write-Stage "MARIADB-PROCESSING" "Processing MariaDB module"
+        if (-not (Extract-MoveFromSubfolder -ZipPath $ZipPath -DestDir $DestDir -Filter "mariadb*")) { throw "extract failed" }
+        Write-Stage "MARIADB-PROCESSING" "Cleaning up unnecessary MariaDB files"
         $libDir = Join-Path $DestDir "lib"
-        if (Test-Path $libDir) {
-            $libFiles = @(Get-ChildItem -Path $libDir -Filter "*.lib" -File -ErrorAction SilentlyContinue)
-            $pdbFiles = @(Get-ChildItem -Path $libDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue)
-
-            foreach ($file in $libFiles) {
-                Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-            }
-
-            foreach ($file in $pdbFiles) {
-                Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-            }
-
-            $totalRemovedFromLib = $libFiles.Count + $pdbFiles.Count
-            if ($totalRemovedFromLib -gt 0) {
-                Write-Success "Removed $totalRemovedFromLib *.lib and *.pdb files from lib directory"
-            }
-        }
-
-        # Remove *.lib and *.pdb files from lib\plugin directory
+        if (Test-Path $libDir) { [void](Remove-FilesByPatterns -Base $libDir -Patterns @("*.lib","*.pdb")) }
         $libPluginDir = Join-Path $DestDir "lib\plugin"
-        if (Test-Path $libPluginDir) {
-            $pluginLibFiles = @(Get-ChildItem -Path $libPluginDir -Filter "*.lib" -File -ErrorAction SilentlyContinue)
-            $pluginPdbFiles = @(Get-ChildItem -Path $libPluginDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue)
-
-            foreach ($file in $pluginLibFiles) {
-                Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-            }
-
-            foreach ($file in $pluginPdbFiles) {
-                Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-            }
-
-            $totalRemovedFromPlugin = $pluginLibFiles.Count + $pluginPdbFiles.Count
-            if ($totalRemovedFromPlugin -gt 0) {
-                Write-Success "Removed $totalRemovedFromPlugin *.lib and *.pdb files from lib\plugin directory"
-            }
-        }
-
-        # Remove include directory
+        if (Test-Path $libPluginDir) { [void](Remove-FilesByPatterns -Base $libPluginDir -Patterns @("*.lib","*.pdb")) }
         $includeDir = Join-Path $DestDir "include"
-        if (Test-Path $includeDir) {
-            Remove-Item $includeDir -Recurse -Force -ErrorAction SilentlyContinue
-            Write-Success "Removed include directory"
-        }
-
-        # Remove *.lib and *.pdb files from bin directory
+        if (Test-Path $includeDir) { Remove-Item $includeDir -Recurse -Force -ErrorAction SilentlyContinue; Write-Success "Removed include directory" }
         $binDir = Join-Path $DestDir "bin"
         if (Test-Path $binDir) {
-            $binLibFiles = @(Get-ChildItem -Path $binDir -Filter "*.lib" -File -ErrorAction SilentlyContinue)
-            $binPdbFiles = @(Get-ChildItem -Path $binDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue)
-
-            $totalBinFiles = $binLibFiles.Count + $binPdbFiles.Count
-            Write-Progress "MARIADB-PROCESSING" "Found $totalBinFiles files to remove from bin directory"
-
-            foreach ($file in $binLibFiles) {
-                Write-Progress "MARIADB-PROCESSING" "Removing $($file.Name) from bin"
-                Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-            }
-
-            foreach ($file in $binPdbFiles) {
-                Write-Progress "MARIADB-PROCESSING" "Removing $($file.Name) from bin"
-                Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-            }
-
-            if ($totalBinFiles -gt 0) {
-                Write-Success "Removed $totalBinFiles *.lib and *.pdb files from bin directory"
-            } else {
-                Write-Warning "No *.lib or *.pdb files found in bin directory"
-            }
-        } else {
-            Write-Warning "Bin directory not found: $binDir"
-        }
-
-        # Clean up temporary directory
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-
-        Write-Success "MariaDB module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing MariaDB module: $_"
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-        return $false
-    }
+            $totalBin = (Remove-FilesByPatterns -Base $binDir -Patterns @("*.lib","*.pdb"))
+            if ($totalBin -gt 0) { Write-Success "Removed $totalBin *.lib and *.pdb files from bin directory" } else { Write-Warning "No *.lib or *.pdb files found in bin directory" }
+        } else { Write-Warning "Bin directory not found: $binDir" }
+        Write-Success "MariaDB module processing completed"; return $true
+    } catch { Write-Error "Error processing MariaDB module: $_"; return $false }
 }
 
-function Process-MemcachedModule {
-    <#
-    .SYNOPSIS
-    Processes Memcached-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-MemcachedModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "MEMCACHED-PROCESSING" "Processing Memcached module"
-
-        # Create temporary directory
-        $tmpDir = "$env:TEMP\memcached_$(Get-Random)"
-
-        # Extract to temporary directory
-        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-
-        # Find Memcached directory (usually memcached-* or similar)
-        $memcachedDir = Get-ChildItem -Path $tmpDir -Directory |
-                      Where-Object { $_.Name -like "memcached*" } |
-                      Select-Object -First 1
-
-        if ($memcachedDir) {
-            # Move contents from Memcached subfolder to module root
-            Get-ChildItem -Path $memcachedDir.FullName | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Moved files from $($memcachedDir.Name) to module root"
-        } else {
-            # Extract directly if no Memcached subfolder found
-            Get-ChildItem -Path $tmpDir | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Files moved directly to module root"
-        }
-
-        # Clean up specific Memcached files
-        Write-Progress "MEMCACHED-PROCESSING" "Cleaning up unnecessary Memcached files"
-
-        # Remove directories
-        $dirsToRemove = @("include")
-        $removedDirs = 0
-
-        foreach ($dir in $dirsToRemove) {
-            $dirPath = Join-Path $DestDir $dir
-            if (Test-Path $dirPath) {
-                Remove-Item $dirPath -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed directory: $dir"
-                $removedDirs++
-            }
-        }
-
-        # Remove *.lib and *.pdb files from bin directory
+        Write-Stage "MEMCACHED-PROCESSING" "Processing Memcached module"
+        if (-not (Extract-MoveFromSubfolder -ZipPath $ZipPath -DestDir $DestDir -Filter "memcached*")) { throw "extract failed" }
+        Write-Stage "MEMCACHED-PROCESSING" "Cleaning up unnecessary Memcached files"
+        [void](Remove-DirectoriesIfExists -Base $DestDir -Dirs @("include"))
         $binDir = Join-Path $DestDir "bin"
-        if (Test-Path $binDir) {
-            $binLibFiles = @(Get-ChildItem -Path $binDir -Filter "*.lib" -File -ErrorAction SilentlyContinue)
-            $binPdbFiles = @(Get-ChildItem -Path $binDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue)
-
-            $totalBinFiles = $binLibFiles.Count + $binPdbFiles.Count
-
-            foreach ($file in $binLibFiles) {
-                Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-            }
-
-            foreach ($file in $binPdbFiles) {
-                Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-            }
-
-            if ($totalBinFiles -gt 0) {
-                Write-Success "Removed $totalBinFiles *.lib and *.pdb files from bin directory"
-            }
-        }
-
-        # Clean up temporary directory
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-
-        Write-Success "Memcached module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing Memcached module: $_"
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-        return $false
-    }
+        if (Test-Path $binDir) { [void](Remove-FilesByPatterns -Base $binDir -Patterns @("*.lib","*.pdb")) }
+        Write-Success "Memcached module processing completed"; return $true
+    } catch { Write-Error "Error processing Memcached module: $_"; return $false }
 }
 
-function Process-MongoDBModule {
-    <#
-    .SYNOPSIS
-    Processes MongoDB-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-MongoDBModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "MONGODB-PROCESSING" "Processing MongoDB module"
-
-        # Create temporary directory
-        $tmpDir = "$env:TEMP\mongodb_$(Get-Random)"
-
-        # Extract to temporary directory
-        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-
-        # Find MongoDB directory (usually mongodb-* or similar)
-        $mongodbDir = Get-ChildItem -Path $tmpDir -Directory |
-                      Where-Object { $_.Name -like "mongodb*" } |
-                      Select-Object -First 1
-
-        if ($mongodbDir) {
-            # Move contents from MongoDB subfolder to module root
-            Get-ChildItem -Path $mongodbDir.FullName | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Moved files from $($mongodbDir.Name) to module root"
-        } else {
-            # Extract directly if no MongoDB subfolder found
-            Get-ChildItem -Path $tmpDir | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Files moved directly to module root"
-        }
-
-        # Clean up specific MongoDB files
-        Write-Progress "MONGODB-PROCESSING" "Cleaning up unnecessary MongoDB files"
-
-        # Remove vc_redist.x64.exe from bin directory
+        Write-Stage "MONGODB-PROCESSING" "Processing MongoDB module"
+        if (-not (Extract-MoveFromSubfolder -ZipPath $ZipPath -DestDir $DestDir -Filter "mongodb*")) { throw "extract failed" }
+        Write-Stage "MONGODB-PROCESSING" "Cleaning up unnecessary MongoDB files"
         $vcRedistPath = Join-Path $DestDir "bin\vc_redist.x64.exe"
-        if (Test-Path $vcRedistPath) {
-            Remove-Item $vcRedistPath -Force -ErrorAction SilentlyContinue
-            Write-Success "Removed vc_redist.x64.exe from bin directory"
-        }
-
-        # Remove *.lib and *.pdb files from bin directory
+        if (Test-Path $vcRedistPath) { Remove-Item $vcRedistPath -Force -ErrorAction SilentlyContinue; Write-Success "Removed vc_redist.x64.exe from bin directory" }
         $binDir = Join-Path $DestDir "bin"
-        if (Test-Path $binDir) {
-            $binLibFiles = @(Get-ChildItem -Path $binDir -Filter "*.lib" -File -ErrorAction SilentlyContinue)
-            $binPdbFiles = @(Get-ChildItem -Path $binDir -Filter "*.pdb" -File -ErrorAction SilentlyContinue)
-
-            $totalBinFiles = $binLibFiles.Count + $binPdbFiles.Count
-
-            foreach ($file in $binLibFiles) {
-                Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-            }
-
-            foreach ($file in $binPdbFiles) {
-                Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-            }
-
-            if ($totalBinFiles -gt 0) {
-                Write-Success "Removed $totalBinFiles *.lib and *.pdb files from bin directory"
-            }
-        }
-
-        # Clean up temporary directory
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-
-        Write-Success "MongoDB module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing MongoDB module: $_"
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-        return $false
-    }
+        if (Test-Path $binDir) { [void](Remove-FilesByPatterns -Base $binDir -Patterns @("*.lib","*.pdb")) }
+        Write-Success "MongoDB module processing completed"; return $true
+    } catch { Write-Error "Error processing MongoDB module: $_"; return $false }
 }
 
-function Process-MySQLModule {
-    <#
-    .SYNOPSIS
-    Processes MySQL-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-MySQLModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "MYSQL-PROCESSING" "Processing MySQL module"
-
-        # Create temporary directory
-        $tmpDir = "$env:TEMP\mysql_$(Get-Random)"
-
-        # Extract to temporary directory
-        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-
-        # Find MySQL directory (usually mysql-* or similar)
-        $mysqlDir = Get-ChildItem -Path $tmpDir -Directory |
-                    Where-Object { $_.Name -like "mysql*" } |
-                    Select-Object -First 1
-
-        if ($mysqlDir) {
-            # Move contents from MySQL subfolder to module root
-            Get-ChildItem -Path $mysqlDir.FullName | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Moved files from $($mysqlDir.Name) to module root"
-
-            # Remove empty MySQL directory
-            Remove-Item $mysqlDir.FullName -Force -ErrorAction SilentlyContinue
-        } else {
-            # Extract directly if no MySQL subfolder found
-            Get-ChildItem -Path $tmpDir | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Files moved directly to module root"
-        }
-
-        # Clean up specific MySQL directories and files
-        Write-Progress "MYSQL-PROCESSING" "Cleaning up unnecessary MySQL files"
-
-        # Remove directories
-        $dirsToRemove = @("data", "include", "docs", "lib\plugin\debug", "lib\debug")
-        $removedDirs = 0
-
-        foreach ($dir in $dirsToRemove) {
-            $dirPath = Join-Path $DestDir $dir
-            if (Test-Path $dirPath) {
-                Remove-Item $dirPath -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed directory: $dir"
-                $removedDirs++
-            }
-        }
-
-        # Remove specific files
-        $filesToRemove = @(
-            "my-default.ini",
-            "bin\mysqld-debug.exe",
-            "bin\mysql_configurator.exe",
-            "lib\libmysqld.dll"
-        )
-
-        $removedFiles = 0
-        foreach ($file in $filesToRemove) {
+        Write-Stage "MYSQL-PROCESSING" "Processing MySQL module"
+        if (-not (Extract-MoveFromSubfolder -ZipPath $ZipPath -DestDir $DestDir -Filter "mysql*")) { throw "extract failed" }
+        Write-Stage "MYSQL-PROCESSING" "Cleaning up unnecessary MySQL files"
+        [void](Remove-DirectoriesIfExists -Base $DestDir -Dirs @("data", "include", "docs", "lib\plugin\debug", "lib\debug"))
+        foreach ($file in @("my-default.ini","bin\mysqld-debug.exe","bin\mysql_configurator.exe","lib\libmysqld.dll")) {
             $filePath = Join-Path $DestDir $file
-            if (Test-Path $filePath) {
-                Remove-Item $filePath -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed file: $file"
-                $removedFiles++
-            }
+            if (Test-Path $filePath) { Remove-Item $filePath -Force -ErrorAction SilentlyContinue; Write-Success "Removed file: $file" }
         }
-
-        # Remove all *.lib and *.pdb files from entire directory structure
-        $libFiles = @(Get-ChildItem -Path $DestDir -Filter "*.lib" -File -Recurse -ErrorAction SilentlyContinue)
-        $pdbFiles = @(Get-ChildItem -Path $DestDir -Filter "*.pdb" -File -Recurse -ErrorAction SilentlyContinue)
-
-        foreach ($file in $libFiles) {
-            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-        }
-
-        foreach ($file in $pdbFiles) {
-            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-        }
-
-        $totalLibPdbFiles = $libFiles.Count + $pdbFiles.Count
-        if ($totalLibPdbFiles -gt 0) {
-            Write-Success "Removed $totalLibPdbFiles *.lib and *.pdb files"
-        }
-
-        # Clean up temporary directory
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-
-        Write-Success "MySQL module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing MySQL module: $_"
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-        return $false
-    }
+        [void](Remove-FilesByPatterns -Base $DestDir -Patterns @("*.lib","*.pdb") -Recurse)
+        Write-Success "MySQL module processing completed"; return $true
+    } catch { Write-Error "Error processing MySQL module: $_"; return $false }
 }
 
-function Process-NginxModule {
-    <#
-    .SYNOPSIS
-    Processes Nginx-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-NginxModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "NGINX-PROCESSING" "Processing Nginx module"
-
-        # Standard extraction
+        Write-Stage "NGINX-PROCESSING" "Processing Nginx module"
         Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
-
-        # Clean up specific Nginx files and directories
-        Write-Progress "NGINX-PROCESSING" "Cleaning up unnecessary Nginx files"
-
-        $dirsToRemove = @("html", "logs", "temp")
-        $removedDirs = 0
-
-        foreach ($dir in $dirsToRemove) {
-            $dirPath = Join-Path $DestDir $dir
-            if (Test-Path $dirPath) {
-                Remove-Item $dirPath -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed directory: $dir"
-                $removedDirs++
-            }
-        }
-
-        # Remove nginx.conf file
+        Write-Stage "NGINX-PROCESSING" "Cleaning up unnecessary Nginx files"
+        [void](Remove-DirectoriesIfExists -Base $DestDir -Dirs @("html","logs","temp"))
         $nginxConfPath = Join-Path $DestDir "conf\nginx.conf"
-        if (Test-Path $nginxConfPath) {
-            Remove-Item $nginxConfPath -Force -ErrorAction SilentlyContinue
-            Write-Success "Removed file: conf\nginx.conf"
-        }
-
-        if ($removedDirs -gt 0) {
-            Write-Success "Cleaned up $removedDirs directories and configuration file"
-        }
-
-        Write-Success "Nginx module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing Nginx module: $_"
-        return $false
-    }
-}
-
-function Process-PHPModule {
-    <#
-    .SYNOPSIS
-    Processes PHP-type modules with additional bin and ext packages
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
-    try {
-        Write-Progress "PHP-PROCESSING" "Processing PHP module with additional packages"
-
-        # Extract PHP version from module name (e.g., "PHP-8.3" -> "8.3")
-        $phpVersion = $ModuleName -replace '^PHP-', ''
-
-        # Get module configuration
-        $module = $moduleInfodata.modules.$ModuleName
-
-        # Define download URLs
-        $mainUrl = $module.DownloadUrl
-        $binUrl = $module.DownloadUrl_bin
-        $extUrl = $module.DownloadUrl_ext
-
-        # Download bin package
-        Write-Progress "PHP-PROCESSING" "Downloading bin package"
-        $binZip = "php-bin.zip"
-        if (-not (Download-Addon -DownloadUrl $binUrl -ZipPath $binZip)) {
-            throw "Failed to download bin package"
-        }
-
-        # Download ext package
-        Write-Progress "PHP-PROCESSING" "Downloading ext package"
-        $extZip = "php-ext.zip"
-        if (-not (Download-Addon -DownloadUrl $extUrl -ZipPath $extZip)) {
-            throw "Failed to download ext package"
-        }
-
-        # Extract packages in order: bin, ext, then main (with file replacement)
-        Write-Progress "PHP-PROCESSING" "Extracting bin package"
-        Expand-Archive -Path $binZip -DestinationPath $DestDir -Force
-        Remove-Item $binZip -Force
-
-        Write-Progress "PHP-PROCESSING" "Extracting ext package"
-        Expand-Archive -Path $extZip -DestinationPath $DestDir -Force
-        Remove-Item $extZip -Force
-
-        Write-Progress "PHP-PROCESSING" "Extracting main PHP package"
-        Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
-
-        # Step 2: Copy specific files to PHP root if they exist
-        Write-Progress "PHP-PROCESSING" "Copying specific files to root"
-        $filesToCopy = @(
-            "bin\sasl2\plugin_sasldb.dll",
-            "bin\openssl.exe",
-            "bin\tidy.exe"
-        )
-
-        foreach ($file in $filesToCopy) {
-            $sourcePath = Join-Path $DestDir $file
-            if (Test-Path $sourcePath) {
-                $fileName = Split-Path $file -Leaf
-                $destPath = Join-Path $DestDir $fileName
-                Copy-Item $sourcePath $destPath -Force
-                Write-Success "Copied $fileName to PHP root"
-            }
-        }
-
-        # Step 3: Remove unnecessary directories
-        Write-Progress "PHP-PROCESSING" "Removing unnecessary directories and files"
-        $dirsToRemove = @("bin", "dev", "3rd-party\imagick\config", "config")
-        $removedDirs = 0
-
-        foreach ($dir in $dirsToRemove) {
-            $dirPath = Join-Path $DestDir $dir
-            if (Test-Path $dirPath) {
-                Remove-Item $dirPath -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed directory: $dir"
-                $removedDirs++
-            }
-        }
-
-        # Step 4: Remove *.pdb and *.lib files recursively
-        $pdbFiles = @(Get-ChildItem -Path $DestDir -Filter "*.pdb" -File -Recurse -ErrorAction SilentlyContinue)
-        $libFiles = @(Get-ChildItem -Path $DestDir -Filter "*.lib" -File -Recurse -ErrorAction SilentlyContinue)
-
-        foreach ($file in $pdbFiles) {
-            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-        }
-
-        foreach ($file in $libFiles) {
-            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-        }
-
-        $totalRemovedFiles = $pdbFiles.Count + $libFiles.Count
-        if ($totalRemovedFiles -gt 0) {
-            Write-Success "Removed $totalRemovedFiles *.pdb and *.lib files"
-        }
-
-        # Step 5: Remove specific DLL files
-        $dllsToRemove = @("fbclient.dll", "IM_MOD_*.dll", "CORE_RL_*.dll", "FILTER_analyze*.dll")
-        $removedDlls = 0
-
-        foreach ($pattern in $dllsToRemove) {
-            $dllFiles = Get-ChildItem -Path $DestDir -Filter $pattern -File -Recurse -ErrorAction SilentlyContinue
-            foreach ($dll in $dllFiles) {
-                Remove-Item $dll.FullName -Force -ErrorAction SilentlyContinue
-                $removedDlls++
-            }
-        }
-
-        if ($removedDlls -gt 0) {
-            Write-Success "Removed $removedDlls unnecessary DLL files"
-        }
-
-        # Step 6: Create browscap.ini
-        Write-Progress "PHP-PROCESSING" "Creating browscap.ini"
-        try {
-            $browscapUrl = "https://browscap.org/stream?q=Lite_PHP_BrowsCapINI"
-            $browscapPath = Join-Path $DestDir "browscap.ini"
-
-            if ($UseProxy) {
-                & curl --socks5 $ProxyUrl -f -s -L -o $browscapPath $browscapUrl 2>$null
-            } else {
-                & curl -f -s -L -o $browscapPath $browscapUrl 2>$null
-            }
-
-            if (Test-Path $browscapPath) {
-                Write-Success "Downloaded browscap.ini"
-            }
-        }
-        catch {
-            Write-Warning "Failed to download browscap.ini: $_"
-        }
-
-        # Step 7: Create phpinfo.php
-        Write-Progress "PHP-PROCESSING" "Creating phpinfo.php"
-        $phpinfoPath = Join-Path $DestDir "phpinfo.php"
-        Set-Content -Path $phpinfoPath -Value "<?php phpinfo() ?>" -Encoding UTF8
-        Write-Success "Created phpinfo.php"
-
-        # Step 8: Download and extract net-snmp mibs
-        Write-Progress "PHP-PROCESSING" "Setting up SNMP MIBs"
-        $netSnmpUrls = @{
-            "7.2" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
-            "7.3" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
-            "7.4" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
-            "8.0" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
-            "8.1" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
-            "8.2" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
-            "8.3" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
-            "8.4" = "https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
-        }
-
-        if ($netSnmpUrls.ContainsKey($phpVersion)) {
-            try {
-                $snmpUrl = $netSnmpUrls[$phpVersion]
-                $snmpZip = "net-snmp.zip"
-                $snmpTmpDir = "$env:TEMP\netsnmp_$(Get-Random)"
-
-                # Download net-snmp archive
-                if ($UseProxy) {
-                    & curl --socks5 $ProxyUrl -f -s -L -o $snmpZip $snmpUrl 2>$null
-                } else {
-                    & curl -f -s -L -o $snmpZip $snmpUrl 2>$null
-                }
-
-                if (Test-Path $snmpZip) {
-                    # Extract archive
-                    Expand-Archive -Path $snmpZip -DestinationPath $snmpTmpDir -Force
-
-                    # Create mibs directory
-                    $mibsDestDir = Join-Path $DestDir "extras\mibs"
-                    if (-not (Test-Path $mibsDestDir)) {
-                        New-Item -ItemType Directory -Force -Path $mibsDestDir | Out-Null
-                    }
-
-                    # Find and copy mibs
-                    $netSnmpDir = Get-ChildItem -Path $snmpTmpDir -Directory -Filter "net-snmp*" | Select-Object -First 1
-                    if ($netSnmpDir) {
-                        $mibsSourceDir = Join-Path $netSnmpDir.FullName "mibs"
-                        if (Test-Path $mibsSourceDir) {
-                            Get-ChildItem -Path $mibsSourceDir -File | ForEach-Object {
-                                Copy-Item $_.FullName $mibsDestDir -Force
-                            }
-                            Write-Success "Extracted SNMP MIBs for PHP $phpVersion"
-                        }
-                    }
-
-                    # Cleanup
-                    Remove-Item $snmpZip -Force -ErrorAction SilentlyContinue
-                    Remove-Item $snmpTmpDir -Recurse -Force -ErrorAction SilentlyContinue
-                }
-            }
-            catch {
-                Write-Warning "Failed to setup SNMP MIBs: $_"
-            }
-        }
-
-        # Step 9: Post-processing - Generate PHP configuration files
-        Write-Progress "PHP-PROCESSING" "Generating PHP configuration files"
-
-        # Load matrix files for INI generation
-        $matrixIniFile = "..\resources\matrix\matrix-ini.json"
-        $commentsIniFile = "..\resources\matrix\matrix-ini-comments.json"
-        $matrixExtFile = "..\resources\matrix\matrix-ext-comments.json"
-
-        if ((Test-Path $matrixIniFile) -and (Test-Path $commentsIniFile)) {
-            try {
-                # Generate php.ini sections
-                Generate-PHPIniFiles -DestDir $DestDir -PhpVersion $phpVersion -MatrixIniFile $matrixIniFile -CommentsIniFile $commentsIniFile
-
-                # Generate ext.ini
-                Generate-PHPExtIni -DestDir $DestDir -MatrixExtFile $matrixExtFile
-
-                # Merge all INI files
-                Merge-PHPIniFiles -DestDir $DestDir -PhpVersion $phpVersion
-
-                Write-Success "Generated and merged PHP configuration files"
-            }
-            catch {
-                Write-Warning "Failed to generate PHP configuration files: $_"
-            }
-        }
-
-        Write-Success "PHP module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing PHP module: $_"
-        return $false
-    }
+        if (Test-Path $nginxConfPath) { Remove-Item $nginxConfPath -Force -ErrorAction SilentlyContinue; Write-Success "Removed file: conf\nginx.conf" }
+        Write-Success "Nginx module processing completed"; return $true
+    } catch { Write-Error "Error processing Nginx module: $_"; return $false }
 }
 
 function Generate-PHPIniFiles {
-    <#
-    .SYNOPSIS
-    Generates PHP INI configuration files
-    #>
-    param(
-        [string]$DestDir,
-        [string]$PhpVersion,
-        [string]$MatrixIniFile,
-        [string]$CommentsIniFile
-    )
-
+    param([string]$DestDir,[string]$PhpVersion,[string]$MatrixIniFile,[string]$CommentsIniFile)
     $matrixJson = Get-Content -Raw -Path $MatrixIniFile | ConvertFrom-Json
     $commentsJson = Get-Content -Raw -Path $CommentsIniFile | ConvertFrom-Json
     $data = $matrixJson.php_extensions_matrix.data
-
-    # Create comment map
     $commentMap = @{}
-    foreach ($p in $commentsJson.PSObject.Properties) {
-        $commentMap[$p.Name] = $p.Value
-    }
-
-    # Group by extension
+    foreach ($p in $commentsJson.PSObject.Properties) { $commentMap[$p.Name] = $p.Value }
     $byExtension = $data | Group-Object -Property extension
-
-    # Generate pre-ini.ini
     $preIniPath = Join-Path $DestDir "pre-ini.ini"
     $preIniLines = New-Object System.Collections.Generic.List[string]
-
     foreach ($extGroup in $byExtension | Sort-Object Name) {
         $extName = $extGroup.Name
         $rows = @()
-
         foreach ($row in $extGroup.Group) {
             $param = [string]$row.parameter
             $useFlag = [bool]$row.use
-
-            $verValueProp = $row.php_versions.PSObject.Properties |
-                           Where-Object { $_.Name -eq $PhpVersion } |
-                           Select-Object -First 1
+            $verValueProp = $row.php_versions.PSObject.Properties | Where-Object { $_.Name -eq $PhpVersion } | Select-Object -First 1
             if ($null -eq $verValueProp) { continue }
-
             $valueText = if ($verValueProp.Value -ne $null) { [string]$verValueProp.Value } else { "" }
-
             if ($valueText -eq "(none)") { continue }
             if ($valueText -eq "(empty)") { $valueText = "" }
-
             $commentText = if ($commentMap.ContainsKey($param)) { [string]$commentMap[$param] } else { "" }
-
-            $rows += [pscustomobject]@{
-                Parameter = $param
-                Value = $valueText
-                Comment = $commentText
-                IsCommented = (-not $useFlag)
-            }
+            $rows += [pscustomobject]@{ Parameter=$param; Value=$valueText; Comment=$commentText; IsCommented=(-not $useFlag) }
         }
-
         if ($rows.Count -eq 0) { continue }
-
-        # Create decorative section header
-        $sectionTitle = "$extName"
         $separator = ";---------------------------------------"
-
-        $preIniLines.Add($separator)
-        $preIniLines.Add("; $sectionTitle")
-        $preIniLines.Add($separator)
-        $preIniLines.Add("")
-
+        $preIniLines.Add($separator); $preIniLines.Add("; $extName"); $preIniLines.Add($separator); $preIniLines.Add("")
         foreach ($r in $rows) {
             $prefix = if ($r.IsCommented) { "; " } else { "" }
             $paramWithPrefix = "{0}{1}" -f $prefix, $r.Parameter
             $paddedParam = $paramWithPrefix.PadRight(38)
             $val = ($r.Value ?? "")
-
             $baseLine = "{0} = {1}" -f $paddedParam, $val
-
             if ([string]::IsNullOrEmpty($r.Comment)) {
                 $preIniLines.Add($baseLine.TrimEnd())
             } else {
                 if ($baseLine.Length -le 62) {
-                    $paddedBaseLine = $baseLine.PadRight(62)
-                    $line = "{0}  ; {1}" -f $paddedBaseLine, $r.Comment
-                    $preIniLines.Add($line.TrimEnd())
+                    $preIniLines.Add(("{0}  ; {1}" -f $baseLine.PadRight(62), $r.Comment).TrimEnd())
                 } else {
-                    $line = "{0}  ; {1}" -f $baseLine, $r.Comment
-                    $preIniLines.Add($line.TrimEnd())
+                    $preIniLines.Add(("{0}  ; {1}" -f $baseLine, $r.Comment).TrimEnd())
                 }
             }
         }
-
         $preIniLines.Add("")
     }
-
     Set-Content -Path $preIniPath -Encoding UTF8 -Value ($preIniLines -join [Environment]::NewLine)
 
-    # Generate main php.ini (extension settings)
     $phpIniPath = Join-Path $DestDir "php.ini"
     $phpIniLines = New-Object System.Collections.Generic.List[string]
-
     foreach ($extGroup in $byExtension | Sort-Object Name) {
         $extName = $extGroup.Name
         $rows = @()
-
         foreach ($row in $extGroup.Group) {
             $param = [string]$row.parameter
             $useFlag = [bool]$row.use
-
-            $verValueProp = $row.php_versions.PSObject.Properties |
-                           Where-Object { $_.Name -eq $PhpVersion } |
-                           Select-Object -First 1
+            $verValueProp = $row.php_versions.PSObject.Properties | Where-Object { $_.Name -eq $PhpVersion } | Select-Object -First 1
             if ($null -eq $verValueProp) { continue }
-
             $valueText = if ($verValueProp.Value -ne $null) { [string]$verValueProp.Value } else { "" }
-
             if ($valueText -eq "(none)") { continue }
             if ($valueText -eq "(empty)") { $valueText = "" }
-
             $commentText = if ($commentMap.ContainsKey($param)) { [string]$commentMap[$param] } else { "" }
-
-            $rows += [pscustomobject]@{
-                Parameter = $param
-                Value = $valueText
-                Comment = $commentText
-                IsCommented = (-not $useFlag)
-            }
+            $rows += [pscustomobject]@{ Parameter=$param; Value=$valueText; Comment=$commentText; IsCommented=(-not $useFlag) }
         }
-
         if ($rows.Count -eq 0) { continue }
-
         $equalPosition = if ($extName -eq "ddtrace") {
             $maxActualParamLength = 0
             foreach ($r in $rows) {
                 $prefix = if ($r.IsCommented) { "; " } else { "" }
                 $fullParamLength = $prefix.Length + $r.Parameter.Length
-                if ($fullParamLength -gt $maxActualParamLength) {
-                    $maxActualParamLength = $fullParamLength
-                }
+                if ($fullParamLength -gt $maxActualParamLength) { $maxActualParamLength = $fullParamLength }
             }
             $maxActualParamLength
-        } else {
-            38
-        }
-
-        $phpIniLines.Add("[$extName]")
-        $phpIniLines.Add("")
-
+        } else { 38 }
+        $phpIniLines.Add("[$extName]"); $phpIniLines.Add("")
         foreach ($r in $rows) {
             $prefix = if ($r.IsCommented) { "; " } else { "" }
             $paramWithPrefix = "{0}{1}" -f $prefix, $r.Parameter
             $paddedParam = $paramWithPrefix.PadRight($equalPosition)
             $val = ($r.Value ?? "")
-
             $baseLine = "{0} = {1}" -f $paddedParam, $val
-
             if ([string]::IsNullOrEmpty($r.Comment)) {
                 $phpIniLines.Add($baseLine.TrimEnd())
             } else {
                 if ($baseLine.Length -le 62) {
-                    $paddedBaseLine = $baseLine.PadRight(62)
-                    $line = "{0}  ; {1}" -f $paddedBaseLine, $r.Comment
-                    $phpIniLines.Add($line.TrimEnd())
+                    $phpIniLines.Add(("{0}  ; {1}" -f $baseLine.PadRight(62), $r.Comment).TrimEnd())
                 } else {
-                    $line = "{0}  ; {1}" -f $baseLine, $r.Comment
-                    $phpIniLines.Add($line.TrimEnd())
+                    $phpIniLines.Add(("{0}  ; {1}" -f $baseLine, $r.Comment).TrimEnd())
                 }
             }
         }
-
         $phpIniLines.Add("")
     }
-
     Set-Content -Path $phpIniPath -Encoding UTF8 -Value ($phpIniLines -join [Environment]::NewLine)
 }
 
 function Generate-PHPExtIni {
-    <#
-    .SYNOPSIS
-    Generates ext.ini for PHP extensions
-    #>
-    param(
-        [string]$DestDir,
-        [string]$MatrixExtFile
-    )
-
+    param([string]$DestDir,[string]$MatrixExtFile)
     $extFolder = Join-Path $DestDir "ext"
     $extIniPath = Join-Path $DestDir "ext.ini"
-
-    if (-not (Test-Path $extFolder)) {
-        Write-Warning "Extensions folder not found: $extFolder"
-        return
-    }
-
+    if (-not (Test-Path $extFolder)) { Write-Warning "Extensions folder not found: $extFolder"; return }
     $dllFiles = Get-ChildItem -Path $extFolder -Filter "*.dll" | Select-Object -ExpandProperty Name
-    $extNames = $dllFiles | ForEach-Object {
-        ($_ -replace '^php_', '') -replace '\.dll$', ''
-    } | Sort-Object -Unique
-
-    # Load comments
+    $extNames = $dllFiles | ForEach-Object { ($_ -replace '^php_', '') -replace '\.dll$', '' } | Sort-Object -Unique
     $comments = @{}
     if (Test-Path $MatrixExtFile) {
         try {
             $commentsJson = Get-Content -Path $MatrixExtFile -Raw -Encoding UTF8 | ConvertFrom-Json
             if ($commentsJson.PSObject.Properties['extensions']) {
-                $commentsJson.extensions.PSObject.Properties | ForEach-Object {
-                    $comments[$_.Name] = $_.Value
-                }
+                $commentsJson.extensions.PSObject.Properties | ForEach-Object { $comments[$_.Name] = $_.Value }
             }
-        }
-        catch {
-            Write-Warning "Error loading extension comments: $_"
-        }
+        } catch { Write-Warning "Error loading extension comments: $_" }
     }
-
-    # Configuration
     $mandatoryList = @("mbstring", "openssl", "apcu", "igbinary", "msgpack", "brotli", "lz4", "lzf", "zstd", "sockets", "psr", "curl")
-    $commonList = @(
-        "bz2", "crypto", "enchant", "exif", "fileinfo", "ftp", "gd", "gd2",
-        "gettext", "gmp", "hrtime","imap", "intl", "mailparse", "mcrypt", "memcache",
-        "memcached", "mysqli", "odbc", "pdo_mysql", "pdo_sqlite", "redis", "scrypt",
-        "soap", "sodium", "sqlite3", "timezonedb", "xmlrpc", "xsl", "yaml", "zip"
-    )
-    $zendList = @("opcache", "xdebug", "scoutapm")
-
+    $commonList = @("bz2","crypto","enchant","exif","fileinfo","ftp","gd","gd2","gettext","gmp","hrtime","imap","intl","mailparse","mcrypt","memcache","memcached","mysqli","odbc","pdo_mysql","pdo_sqlite","redis","scrypt","soap","sodium","sqlite3","timezonedb","xmlrpc","xsl","yaml","zip")
+    $zendList = @("opcache","xdebug","scoutapm")
     function Format-ExtensionLine {
-        param(
-            [string]$type,
-            [string]$extension,
-            [hashtable]$comments,
-            [bool]$commented = $false
-        )
-
+        param([string]$type,[string]$extension,[hashtable]$comments,[bool]$commented = $false)
         $prefix = if ($commented) { "; " } else { "" }
         $line = "$prefix$type"
-
-        while ($line.Length -lt 39) {
-            $line += " "
-        }
-
+        while ($line.Length -lt 39) { $line += " " }
         $line += "= $extension"
-
         if ($comments.ContainsKey($extension)) {
-            while ($line.Length -lt 64) {
-                $line += " "
-            }
+            while ($line.Length -lt 64) { $line += " " }
             $line += "; $($comments[$extension])"
         }
-
         return $line
     }
-
     $iniLines = @()
     $iniLines += ";---------------------------------------"
     $iniLines += "; Extensions"
     $iniLines += "; Do not change the order of extensions in the config!"
     $iniLines += ";---------------------------------------"
     $iniLines += ""
-
-    # ionCube
     if ($extNames -contains "ioncube") {
         $iniLines += Format-ExtensionLine -type "zend_extension" -extension "ioncube" -comments $comments -commented $true
         $iniLines += ""
     }
-
-    # Mandatory extensions
     $foundMandatory = $mandatoryList | Where-Object { $extNames -contains $_ }
     if ($foundMandatory.Count -gt 0) {
-        $iniLines += "; Mandatory extensions"
-        $iniLines += "; Never disable these extensions!"
-        $iniLines += ""
-
-        foreach ($ext in $foundMandatory) {
-            $iniLines += Format-ExtensionLine -type "extension" -extension $ext -comments $comments
-        }
+        $iniLines += "; Mandatory extensions"; $iniLines += "; Never disable these extensions!"; $iniLines += ""
+        foreach ($ext in $foundMandatory) { $iniLines += (Format-ExtensionLine -type "extension" -extension $ext -comments $comments) }
         $iniLines += ""
     }
-
-    # Common extensions
     $foundCommon = $commonList | Where-Object { $extNames -contains $_ } | Sort-Object
     if ($foundCommon.Count -gt 0) {
-        $iniLines += "; Commonly used extensions"
-        $iniLines += ""
-
-        foreach ($ext in $foundCommon) {
-            $iniLines += Format-ExtensionLine -type "extension" -extension $ext -comments $comments
-        }
+        $iniLines += "; Commonly used extensions"; $iniLines += ""
+        foreach ($ext in $foundCommon) { $iniLines += (Format-ExtensionLine -type "extension" -extension $ext -comments $comments) }
         $iniLines += ""
     }
-
-    # Optional extensions
     $usedExtensions = $mandatoryList + $commonList + $zendList + @("ioncube")
     $foundOptional = $extNames | Where-Object { $_ -notin $usedExtensions } | Sort-Object
     if ($foundOptional.Count -gt 0) {
-        $iniLines += "; Optional / commented extensions"
-        $iniLines += ""
-
-        foreach ($ext in $foundOptional) {
-            $iniLines += Format-ExtensionLine -type "extension" -extension $ext -comments $comments -commented $true
-        }
+        $iniLines += "; Optional / commented extensions"; $iniLines += ""
+        foreach ($ext in $foundOptional) { $iniLines += (Format-ExtensionLine -type "extension" -extension $ext -comments $comments -commented $true) }
         $iniLines += ""
     }
-
-    # Zend extensions
     $foundZend = $zendList | Where-Object { $extNames -contains $_ } | Sort-Object
     if ($foundZend.Count -gt 0) {
-        $iniLines += "; Zend extensions"
-        $iniLines += ""
-
-        foreach ($ext in $foundZend) {
-            $iniLines += Format-ExtensionLine -type "zend_extension" -extension $ext -comments $comments -commented $true
-        }
+        $iniLines += "; Zend extensions"; $iniLines += ""
+        foreach ($ext in $foundZend) { $iniLines += (Format-ExtensionLine -type "zend_extension" -extension $ext -comments $comments -commented $true) }
     }
-
     Set-Content -Path $extIniPath -Value $iniLines -Encoding UTF8
 }
 
 function Merge-PHPIniFiles {
-    <#
-    .SYNOPSIS
-    Merges PHP configuration files into final php.ini
-    #>
-    param(
-        [string]$DestDir,
-        [string]$PhpVersion
-    )
-
+    param([string]$DestDir,[string]$PhpVersion)
     $preIni = Join-Path $DestDir 'pre-ini.ini'
     $extIni = Join-Path $DestDir 'ext.ini'
     $phpIni = Join-Path $DestDir 'php.ini'
     $mergedIni = Join-Path $DestDir 'php.ini.merged'
-
     if ((Test-Path $preIni) -and (Test-Path $extIni) -and (Test-Path $phpIni)) {
-        # Merge all files
         $content = @(
-            "[PHP]",
-            "",
+            "[PHP]","",
             (Get-Content $preIni),
             (Get-Content $extIni),
-            "",
-            ";---------------------------------------",
-            "; Extensions settings",
-            ";---------------------------------------",
-            "",
+            "",";---------------------------------------","; Extensions settings",";---------------------------------------","",
             (Get-Content $phpIni)
         )
-
         Set-Content $mergedIni -Encoding UTF8 -Value $content
-
-        # Remove temporary files
-        Remove-Item $preIni -Force -ErrorAction SilentlyContinue
-        Remove-Item $extIni -Force -ErrorAction SilentlyContinue
-        Remove-Item $phpIni -Force -ErrorAction SilentlyContinue
-
-        # Get PHP version from executable
+        Remove-Item $preIni,$extIni,$phpIni -Force -ErrorAction SilentlyContinue
         $phpExe = Join-Path $DestDir 'php.exe'
         if (Test-Path $phpExe) {
             $phpVersionOutput = (& $phpExe -v)[0] -replace '^PHP ([\d\.]+).*','$1'
-
-            # Update module.ini with actual PHP version
             $moduleIniPath = Join-Path $DestDir 'ospanel_data\module.dat'
             if (Test-Path $moduleIniPath) {
-                $content = Get-Content $moduleIniPath -Raw
-                $newContent = $content -replace '(\bversion\s*=\s*)[\d\.]+', ('version                 = ' + $phpVersionOutput)
+                $contentDat = Get-Content $moduleIniPath -Raw
+                $newContent = $contentDat -replace '(\bversion\s*=\s*)[\d\.]+', ('version                 = ' + $phpVersionOutput)
                 Set-Content $moduleIniPath $newContent -Encoding UTF8
             }
         }
-
-        # Move merged file to final location
         $finalIniDir = Join-Path $DestDir 'ospanel_data\default\templates'
-        if (-not (Test-Path $finalIniDir)) {
-            New-Item -ItemType Directory -Path $finalIniDir -Force | Out-Null
-        }
-
+        if (-not (Test-Path $finalIniDir)) { New-Item -ItemType Directory -Path $finalIniDir -Force | Out-Null }
         $finalIniPath = Join-Path $finalIniDir 'php.ini'
         Move-Item $mergedIni $finalIniPath -Force
-
         Write-Success "PHP configuration files merged and moved to final location"
     }
 }
 
-function Process-PostgreSQLModule {
-    <#
-    .SYNOPSIS
-    Processes PostgreSQL-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-PHPModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "POSTGRESQL-PROCESSING" "Processing PostgreSQL module"
+        Write-Stage "PHP-PROCESSING" "Processing PHP module with additional packages"
+        $phpVersion = $ModuleName -replace '^PHP-', ''
+        $module = $moduleInfodata.modules.$ModuleName
+        $binUrl = $module.DownloadUrl_bin
+        $extUrl = $module.DownloadUrl_ext
+        Write-Stage "PHP-PROCESSING" "Downloading bin package"
+        $binZip = "php-bin.zip"
+        if (-not (Download-Addon -DownloadUrl $binUrl -ZipPath $binZip)) { throw "Failed to download bin package" }
+        Write-Stage "PHP-PROCESSING" "Downloading ext package"
+        $extZip = "php-ext.zip"
+        if (-not (Download-Addon -DownloadUrl $extUrl -ZipPath $extZip)) { throw "Failed to download ext package" }
+        Write-Stage "PHP-PROCESSING" "Extracting bin package"
+        Expand-Archive -Path $binZip -DestinationPath $DestDir -Force; Remove-Item $binZip -Force
+        Write-Stage "PHP-PROCESSING" "Extracting ext package"
+        Expand-Archive -Path $extZip -DestinationPath $DestDir -Force; Remove-Item $extZip -Force
+        Write-Stage "PHP-PROCESSING" "Extracting main PHP package"
+        Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+        Write-Stage "PHP-PROCESSING" "Copying specific files to root"
+        foreach ($file in @("bin\sasl2\plugin_sasldb.dll","bin\openssl.exe","bin\tidy.exe")) {
+            $sourcePath = Join-Path $DestDir $file
+            if (Test-Path $sourcePath) { Copy-Item $sourcePath (Join-Path $DestDir (Split-Path $file -Leaf)) -Force; Write-Success "Copied $(Split-Path $file -Leaf) to PHP root" }
+        }
+        Write-Stage "PHP-PROCESSING" "Removing unnecessary directories and files"
+        [void](Remove-DirectoriesIfExists -Base $DestDir -Dirs @("bin","dev","3rd-party\imagick\config","config"))
+        [void](Remove-FilesByPatterns -Base $DestDir -Patterns @("*.pdb","*.lib") -Recurse)
+        $removedDlls = Remove-FilesByPatterns -Base $DestDir -Patterns @("fbclient.dll","IM_MOD_*.dll","CORE_RL_*.dll","FILTER_analyze*.dll") -Recurse
+        if ($removedDlls -gt 0) { Write-Success "Removed $removedDlls unnecessary DLL files" }
 
-        # Create temporary directory
-        $tmpDir = "$env:TEMP\postgresql_$(Get-Random)"
+        Write-Stage "PHP-PROCESSING" "Creating browscap.ini"
+        try {
+            $browscapUrl = "https://browscap.org/stream?q=Lite_PHP_BrowsCapINI"
+            $browscapPath = Join-Path $DestDir "browscap.ini"
+            Invoke-Curl -Url $browscapUrl -OutFile $browscapPath -Fail -Silent -Follow
+            if (Test-Path $browscapPath) { Write-Success "Downloaded browscap.ini" }
+        } catch { Write-Warning "Failed to download browscap.ini: $_" }
 
-        # Extract to temporary directory
-        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
+        Write-Stage "PHP-PROCESSING" "Creating phpinfo.php"
+        $phpinfoPath = Join-Path $DestDir "phpinfo.php"
+        Set-Content -Path $phpinfoPath -Value "<?php phpinfo() ?>" -Encoding UTF8
+        Write-Success "Created phpinfo.php"
 
-        # Find pgsql directory
-        $pgsqlDir = Get-ChildItem -Path $tmpDir -Directory |
-                    Where-Object { $_.Name -eq "pgsql" } |
-                    Select-Object -First 1
+        Write-Stage "PHP-PROCESSING" "Setting up SNMP MIBs"
+        $netSnmpUrls = @{
+            "7.2"="https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
+            "7.3"="https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
+            "7.4"="https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
+            "8.0"="https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.7.3/net-snmp-5.7.3.zip?viasf=1"
+            "8.1"="https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
+            "8.2"="https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
+            "8.3"="https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
+            "8.4"="https://netix.dl.sourceforge.net/project/net-snmp/net-snmp/5.9.4/net-snmp-5.9.4.zip?viasf=1"
+        }
+        if ($netSnmpUrls.ContainsKey($phpVersion)) {
+            try {
+                $snmpUrl = $netSnmpUrls[$phpVersion]
+                $snmpZip = "net-snmp.zip"
+                $snmpTmpDir = "$env:TEMP\netsnmp_$(Get-Random)"
+                Invoke-Curl -Url $snmpUrl -OutFile $snmpZip -Fail -Silent -Follow
+                if (Test-Path $snmpZip) {
+                    Expand-Archive -Path $snmpZip -DestinationPath $snmpTmpDir -Force
+                    $mibsDestDir = Join-Path $DestDir "extras\mibs"
+                    if (-not (Test-Path $mibsDestDir)) { New-Item -ItemType Directory -Force -Path $mibsDestDir | Out-Null }
+                    $netSnmpDir = Get-ChildItem -Path $snmpTmpDir -Directory -Filter "net-snmp*" | Select-Object -First 1
+                    if ($netSnmpDir) {
+                        $mibsSourceDir = Join-Path $netSnmpDir.FullName "mibs"
+                        if (Test-Path $mibsSourceDir) { Get-ChildItem -Path $mibsSourceDir -File | ForEach-Object { Copy-Item $_.FullName $mibsDestDir -Force }; Write-Success "Extracted SNMP MIBs for PHP $phpVersion" }
+                    }
+                    Remove-Item $snmpZip -Force -ErrorAction SilentlyContinue
+                    Remove-Item $snmpTmpDir -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            } catch { Write-Warning "Failed to setup SNMP MIBs: $_" }
+        }
 
+        Write-Stage "PHP-PROCESSING" "Generating PHP configuration files"
+        $matrixIniFile = "..\resources\matrix\matrix-ini.json"
+        $commentsIniFile = "..\resources\matrix\matrix-ini-comments.json"
+        $matrixExtFile = "..\resources\matrix\matrix-ext-comments.json"
+        if ((Test-Path $matrixIniFile) -and (Test-Path $commentsIniFile)) {
+            try {
+                Generate-PHPIniFiles -DestDir $DestDir -PhpVersion $phpVersion -MatrixIniFile $matrixIniFile -CommentsIniFile $commentsIniFile
+                Generate-PHPExtIni -DestDir $DestDir -MatrixExtFile $matrixExtFile
+                Merge-PHPIniFiles -DestDir $DestDir -PhpVersion $phpVersion
+                Write-Success "Generated and merged PHP configuration files"
+            } catch { Write-Warning "Failed to generate PHP configuration files: $_" }
+        }
+        Write-Success "PHP module processing completed"; return $true
+    } catch { Write-Error "Error processing PHP module: $_"; return $false }
+}
+
+function Process-PostgreSQLModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
+    try {
+        Write-Stage "POSTGRESQL-PROCESSING" "Processing PostgreSQL module"
+        # особенность: внутри pgsql
+        $tmpDir = New-TempDir
+        Expand-Zip -ZipPath $ZipPath -DestDir $tmpDir
+        $pgsqlDir = Get-ChildItem -Path $tmpDir -Directory | Where-Object { $_.Name -eq "pgsql" } | Select-Object -First 1
         if ($pgsqlDir) {
-            # Move contents from pgsql subfolder to module root
-            Get-ChildItem -Path $pgsqlDir.FullName | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
+            Move-AllChildren -SourceDir $pgsqlDir.FullName -DestDir $DestDir
             Write-Success "Moved files from pgsql to module root"
-
-            # Remove empty pgsql directory
-            Remove-Item $pgsqlDir.FullName -Force -ErrorAction SilentlyContinue
         } else {
-            # Extract directly if no pgsql subfolder found
-            Get-ChildItem -Path $tmpDir | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
+            Move-AllChildren -SourceDir $tmpDir -DestDir $DestDir
             Write-Success "Files moved directly to module root"
         }
+        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 
-        # Clean up specific PostgreSQL directories and files
-        Write-Progress "POSTGRESQL-PROCESSING" "Cleaning up unnecessary PostgreSQL files"
-
-        # Remove directories
-        $dirsToRemove = @("pgAdmin 4", "pgAdmin 3", "include", "symbols", "lib\pkgconfig", "lib\pgxs")
-        $removedDirs = 0
-
-        foreach ($dir in $dirsToRemove) {
-            $dirPath = Join-Path $DestDir $dir
-            if (Test-Path $dirPath) {
-                Remove-Item $dirPath -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed directory: $dir"
-                $removedDirs++
-            }
-        }
-        # Remove all *.lib and *.pdb files from entire directory structure
-        $libFiles = @(Get-ChildItem -Path $DestDir -Filter "*.lib" -File -Recurse -ErrorAction SilentlyContinue)
-        $pdbFiles = @(Get-ChildItem -Path $DestDir -Filter "*.pdb" -File -Recurse -ErrorAction SilentlyContinue)
-
-        # Remove all lib*.a ONLY from the "lib" subdirectory (not recursively)
+        Write-Stage "POSTGRESQL-PROCESSING" "Cleaning up unnecessary PostgreSQL files"
+        [void](Remove-DirectoriesIfExists -Base $DestDir -Dirs @("pgAdmin 4","pgAdmin 3","include","symbols","lib\pkgconfig","lib\pgxs"))
+        $libFilesCount = Remove-FilesByPatterns -Base $DestDir -Patterns @("*.lib","*.pdb") -Recurse
         $libASubDir = Join-Path $DestDir "lib"
         $libAFiles = @()
-        if (Test-Path $libASubDir) {
-            $libAFiles = @(Get-ChildItem -Path $libASubDir -Filter "lib*.a" -File -ErrorAction SilentlyContinue)
-        }
+        if (Test-Path $libASubDir) { $libAFiles = @(Get-ChildItem -Path $libASubDir -Filter "lib*.a" -File -ErrorAction SilentlyContinue) }
+        foreach ($file in $libAFiles) { Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue }
+        $totalRemoved = $libFilesCount + $libAFiles.Count
+        if ($totalRemoved -gt 0) { Write-Success "Removed $totalRemoved *.lib, *.pdb and lib\lib*.a files" }
 
-        foreach ($file in $libFiles) {
-            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-        }
-
-        foreach ($file in $pdbFiles) {
-            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-        }
-
-        foreach ($file in $libAFiles) {
-            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-        }
-
-        $totalRemoved = $libFiles.Count + $pdbFiles.Count + $libAFiles.Count
-        if ($totalRemoved -gt 0) {
-            Write-Success "Removed $totalRemoved *.lib, *.pdb and lib\lib*.a files"
-        }
-
-        # Clean up temporary directory
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-
-        Write-Success "PostgreSQL module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing PostgreSQL module: $_"
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-        return $false
-    }
+        Write-Success "PostgreSQL module processing completed"; return $true
+    } catch { Write-Error "Error processing PostgreSQL module: $_"; return $false }
 }
 
-function Process-RabbitMQModule {
-    <#
-    .SYNOPSIS
-    Processes RabbitMQ-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-RabbitMQModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "RABBITMQ-PROCESSING" "Processing RabbitMQ module"
-
-        # Create temporary directory
-        $tmpDir = "$env:TEMP\rabbitmq_$(Get-Random)"
-
-        # Extract to temporary directory
-        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-
-        # Find RabbitMQ directory (usually rabbitmq-* or similar)
-        $rabbitmqDir = Get-ChildItem -Path $tmpDir -Directory |
-                       Where-Object { $_.Name -like "rabbitmq*" } |
-                       Select-Object -First 1
-
-        if ($rabbitmqDir) {
-            # Move contents from RabbitMQ subfolder to module root
-            Get-ChildItem -Path $rabbitmqDir.FullName | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Moved files from $($rabbitmqDir.Name) to module root"
-
-            # Remove empty RabbitMQ directory
-            Remove-Item $rabbitmqDir.FullName -Force -ErrorAction SilentlyContinue
-        } else {
-            # Extract directly if no RabbitMQ subfolder found
-            Get-ChildItem -Path $tmpDir | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Files moved directly to module root"
-        }
-
-        # Clean up specific RabbitMQ files
-        Write-Progress "RABBITMQ-PROCESSING" "Cleaning up unnecessary RabbitMQ files"
-
-        # Remove README.txt from etc directory
+        Write-Stage "RABBITMQ-PROCESSING" "Processing RabbitMQ module"
+        if (-not (Extract-MoveFromSubfolder -ZipPath $ZipPath -DestDir $DestDir -Filter "rabbitmq*")) { throw "extract failed" }
+        Write-Stage "RABBITMQ-PROCESSING" "Cleaning up unnecessary RabbitMQ files"
         $readmePath = Join-Path $DestDir "etc\README.txt"
-        if (Test-Path $readmePath) {
-            Remove-Item $readmePath -Force -ErrorAction SilentlyContinue
-            Write-Success "Removed file: etc\README.txt"
-        }
-
-        # Clean up temporary directory
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-
-        Write-Success "RabbitMQ module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing RabbitMQ module: $_"
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-        return $false
-    }
+        if (Test-Path $readmePath) { Remove-Item $readmePath -Force -ErrorAction SilentlyContinue; Write-Success "Removed file: etc\README.txt" }
+        Write-Success "RabbitMQ module processing completed"; return $true
+    } catch { Write-Error "Error processing RabbitMQ module: $_"; return $false }
 }
 
-function Process-RedisModule {
-    <#
-    .SYNOPSIS
-    Processes Redis-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-RedisModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "REDIS-PROCESSING" "Processing Redis module"
-
-        # Create temporary directory
-        $tmpDir = "$env:TEMP\redis_$(Get-Random)"
-
-        # Extract to temporary directory
-        Expand-Archive -Path $ZipPath -DestinationPath $tmpDir -Force
-
-        # Find Redis directory (usually redis-* or similar)
-        $redisDir = Get-ChildItem -Path $tmpDir -Directory |
-                    Where-Object { $_.Name -like "redis*" } |
-                    Select-Object -First 1
-
-        if ($redisDir) {
-            # Move contents from Redis subfolder to module root
-            Get-ChildItem -Path $redisDir.FullName | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Moved files from $($redisDir.Name) to module root"
-
-            # Remove empty Redis directory
-            Remove-Item $redisDir.FullName -Force -ErrorAction SilentlyContinue
-        } else {
-            # Extract directly if no Redis subfolder found
-            Get-ChildItem -Path $tmpDir | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $DestDir -Force
-            }
-            Write-Success "Files moved directly to module root"
-        }
-
-        # Clean up specific Redis files
-        Write-Progress "REDIS-PROCESSING" "Cleaning up unnecessary Redis files"
-
-        $filesToRemove = @(
-            "redis.conf",
-            "install_redis.cmd"
-        )
-
-        $removedFiles = 0
-        foreach ($file in $filesToRemove) {
+        Write-Stage "REDIS-PROCESSING" "Processing Redis module"
+        if (-not (Extract-MoveFromSubfolder -ZipPath $ZipPath -DestDir $DestDir -Filter "redis*")) { throw "extract failed" }
+        Write-Stage "REDIS-PROCESSING" "Cleaning up unnecessary Redis files"
+        foreach ($file in @("redis.conf","install_redis.cmd")) {
             $filePath = Join-Path $DestDir $file
-            if (Test-Path $filePath) {
-                Remove-Item $filePath -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed file: $file"
-                $removedFiles++
-            }
+            if (Test-Path $filePath) { Remove-Item $filePath -Force -ErrorAction SilentlyContinue; Write-Success "Removed file: $file" }
         }
-
-        # Download RedisJson rejson.dll
-        Write-Progress "REDIS-PROCESSING" "Downloading RedisJson module"
+        Write-Stage "REDIS-PROCESSING" "Downloading RedisJson module"
         try {
             $rejsonUrl = "https://github.com/zkteco-home/RedisJson/raw/master/rejson.dll"
             $rejsonPath = Join-Path $DestDir "rejson.dll"
-
             Invoke-WebRequest -Uri $rejsonUrl -OutFile $rejsonPath -UseBasicParsing
             Write-Success "Downloaded rejson.dll to module directory"
-        }
-        catch {
-            Write-Warning "Failed to download rejson.dll: $_"
-        }
-
-        # Clean up temporary directory
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-
-        Write-Success "Redis module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing Redis module: $_"
-        Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
-        return $false
-    }
+        } catch { Write-Warning "Failed to download rejson.dll: $_" }
+        Write-Success "Redis module processing completed"; return $true
+    } catch { Write-Error "Error processing Redis module: $_"; return $false }
 }
 
-function Process-Smtp4devModule {
-    <#
-    .SYNOPSIS
-    Processes Smtp4dev-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-Smtp4devModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "SMTP4DEV-PROCESSING" "Processing Smtp4dev module"
-
-        # Extract archive directly to destination
+        Write-Stage "SMTP4DEV-PROCESSING" "Processing Smtp4dev module"
         Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
-
-        # Clean up specific Smtp4dev files
-        Write-Progress "SMTP4DEV-PROCESSING" "Cleaning up unnecessary Smtp4dev files"
-
-        # Remove *.pdb files
-        $pdbFiles = @(Get-ChildItem -Path $DestDir -Filter "*.pdb" -File -Recurse -ErrorAction SilentlyContinue)
-        foreach ($file in $pdbFiles) {
-            Remove-Item $file.FullName -Force -ErrorAction SilentlyContinue
-        }
-
-        if ($pdbFiles.Count -gt 0) {
-            Write-Success "Removed $($pdbFiles.Count) *.pdb files"
-        }
-
-        # Remove specific config files
-        $filesToRemove = @(
-            "web.config",
-            "appsettings.json"
-        )
-
-        $removedFiles = 0
-        foreach ($file in $filesToRemove) {
+        Write-Stage "SMTP4DEV-PROCESSING" "Cleaning up unnecessary Smtp4dev files"
+        $pdbRemoved = Remove-FilesByPatterns -Base $DestDir -Patterns @("*.pdb") -Recurse
+        foreach ($file in @("web.config","appsettings.json")) {
             $filePath = Join-Path $DestDir $file
-            if (Test-Path $filePath) {
-                Remove-Item $filePath -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed file: $file"
-                $removedFiles++
-            }
+            if (Test-Path $filePath) { Remove-Item $filePath -Force -ErrorAction SilentlyContinue; Write-Success "Removed file: $file" }
         }
-
-        # Rename Rnwood.Smtp4dev.xml to w3wp.Smtp4dev.exe.xml
         $xmlOldPath = Join-Path $DestDir "Rnwood.Smtp4dev.xml"
-        $xmlNewPath = Join-Path $DestDir "w3wp.Smtp4dev.exe.xml"
-        if (Test-Path $xmlOldPath) {
-            Rename-Item -Path $xmlOldPath -NewName "w3wp.Smtp4dev.exe.xml" -Force
-            Write-Success "Renamed Rnwood.Smtp4dev.xml to w3wp.Smtp4dev.exe.xml"
-        }
-
-        # Rename Rnwood.Smtp4dev.exe to w3wp.Smtp4dev.exe
+        if (Test-Path $xmlOldPath) { Rename-Item -Path $xmlOldPath -NewName "w3wp.Smtp4dev.exe.xml" -Force; Write-Success "Renamed Rnwood.Smtp4dev.xml to w3wp.Smtp4dev.exe.xml" }
         $exeOldPath = Join-Path $DestDir "Rnwood.Smtp4dev.exe"
-        $exeNewPath = Join-Path $DestDir "w3wp.Smtp4dev.exe"
-        if (Test-Path $exeOldPath) {
-            Rename-Item -Path $exeOldPath -NewName "w3wp.Smtp4dev.exe" -Force
-            Write-Success "Renamed Rnwood.Smtp4dev.exe to w3wp.Smtp4dev.exe"
-        }
-
-        Write-Success "Smtp4dev module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing Smtp4dev module: $_"
-        return $false
-    }
+        if (Test-Path $exeOldPath) { Rename-Item -Path $exeOldPath -NewName "w3wp.Smtp4dev.exe" -Force; Write-Success "Renamed Rnwood.Smtp4dev.exe to w3wp.Smtp4dev.exe" }
+        Write-Success "Smtp4dev module processing completed"; return $true
+    } catch { Write-Error "Error processing Smtp4dev module: $_"; return $false }
 }
 
-function Process-UnboundModule {
-    <#
-    .SYNOPSIS
-    Processes Unbound-type modules
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to downloaded archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
-    param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
+function Process-UnboundModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
-        Write-Progress "UNBOUND-PROCESSING" "Processing Unbound module"
-
-        # Extract archive directly to destination
+        Write-Stage "UNBOUND-PROCESSING" "Processing Unbound module"
         Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
-
-        # Clean up specific Unbound files
-        Write-Progress "UNBOUND-PROCESSING" "Cleaning up unnecessary Unbound files"
-
-        # Remove specific files
-        $filesToRemove = @(
-            "root.key",
-            "service.conf",
-            "unbound-service-install.exe",
-            "unbound-service-remove.exe"
-        )
-
-        $removedFiles = 0
-        foreach ($file in $filesToRemove) {
+        Write-Stage "UNBOUND-PROCESSING" "Cleaning up unnecessary Unbound files"
+        foreach ($file in @("root.key","service.conf","unbound-service-install.exe","unbound-service-remove.exe")) {
             $filePath = Join-Path $DestDir $file
-            if (Test-Path $filePath) {
-                Remove-Item $filePath -Force -ErrorAction SilentlyContinue
-                Write-Success "Removed file: $file"
-                $removedFiles++
-            }
+            if (Test-Path $filePath) { Remove-Item $filePath -Force -ErrorAction SilentlyContinue; Write-Success "Removed file: $file" }
         }
-
-        # Remove libunbound directory
         $libunboundPath = Join-Path $DestDir "libunbound"
-        if (Test-Path $libunboundPath) {
-            Remove-Item $libunboundPath -Recurse -Force -ErrorAction SilentlyContinue
-            Write-Success "Removed directory: libunbound"
-        }
-
-        Write-Success "Unbound module processing completed"
-        return $true
-    }
-    catch {
-        Write-Error "Error processing Unbound module: $_"
-        return $false
-    }
+        if (Test-Path $libunboundPath) { Remove-Item $libunboundPath -Recurse -Force -ErrorAction SilentlyContinue; Write-Success "Removed directory: libunbound" }
+        Write-Success "Unbound module processing completed"; return $true
+    } catch { Write-Error "Error processing Unbound module: $_"; return $false }
 }
 
 function Extract-Module {
-    <#
-    .SYNOPSIS
-    Extracts and processes module with type-specific handling
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER ZipPath
-    Path to archive
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
     param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
-
     try {
-        Write-Progress "EXTRACTION" "Extracting module archive"
-
-        # Create target directory
-        if (-not (Test-Path $DestDir)) {
-            New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
-        }
-
-        # Determine module type and process accordingly
+        Write-Stage "EXTRACTION" "Extracting module archive"
+        if (-not (Test-Path $DestDir)) { New-Item -ItemType Directory -Force -Path $DestDir | Out-Null }
         $moduleType = Get-ModuleType -ModuleName $ModuleName
-
         $result = switch ($moduleType) {
-            "Apache" { Process-ApacheModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "Bind" { Process-BindModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "Mailpit" { Process-MailpitModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "MariaDB" { Process-MariaDBModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "Memcached" { Process-MemcachedModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "MongoDB" { Process-MongoDBModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "MySQL" { Process-MySQLModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "Nginx" { Process-NginxModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "PHP" { Process-PHPModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "PostgreSQL" { Process-PostgreSQLModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "RabbitMQ" { Process-RabbitMQModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "Redis" { Process-RedisModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "Smtp4dev" { Process-Smtp4devModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
-            "Unbound" { Process-UnboundModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "Apache"      { Process-ApacheModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "Bind"        { Process-BindModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "Mailpit"     { Process-MailpitModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "MariaDB"     { Process-MariaDBModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "Memcached"   { Process-MemcachedModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "MongoDB"     { Process-MongoDBModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "MySQL"       { Process-MySQLModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "Nginx"       { Process-NginxModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "PHP"         { Process-PHPModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "PostgreSQL"  { Process-PostgreSQLModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "RabbitMQ"    { Process-RabbitMQModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "Redis"       { Process-RedisModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "Smtp4dev"    { Process-Smtp4devModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "Unbound"     { Process-UnboundModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
             default {
                 Write-Warning "Unknown module type for $ModuleName, using standard extraction"
                 Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
                 $true
             }
         }
-
-        # Remove archive after extraction
-        if (Test-Path $ZipPath) {
-            Remove-Item $ZipPath -Force
-        }
-
-        if ($result) {
-            Write-Success "Module archive successfully extracted and deleted"
-        }
-
+        if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
+        if ($result) { Write-Success "Module archive successfully extracted and deleted" }
         return $result
-    }
-    catch {
-        Write-Error "Error extracting module archive: $_"
-        return $false
-    }
+    } catch { Write-Error "Error extracting module archive: $_"; return $false }
 }
 
 function Generate-ModuleHelpFiles {
-    <#
-    .SYNOPSIS
-    Generates help files for module executable files
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER DestDir
-    Module directory
-
-    .PARAMETER Module
-    Module object with settings
-    #>
     param([string]$ModuleName, [string]$DestDir, [object]$Module)
-
-    Write-Progress "HELP" "Generating module help files"
-
+    Write-Stage "HELP" "Generating module help files"
     $HelpDir = "$DestDir\ospanel_data\help"
-
-    # Create help directory
-    if (-not (Test-Path $HelpDir)) {
-        New-Item -ItemType Directory -Force -Path $HelpDir | Out-Null
-    }
-
-    $generatedFiles = 0
+    if (-not (Test-Path $HelpDir)) { New-Item -ItemType Directory -Force -Path $HelpDir | Out-Null }
     $helpCmd = if ($Module.help) { $Module.help } else { "--help" }
+    $exclude = @('logresolve.exe','nslookup.exe','isolationtester.exe','phpdbg.exe','memcached-debug.exe')
 
-    $executables = Get-ChildItem -Path $DestDir -Filter *.exe -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -notin 'logresolve.exe','nslookup.exe','isolationtester.exe','phpdbg.exe','memcached-debug.exe' }
-
-    if (-not $executables) {
-        Write-Warning "No executable files found"
-        return
-    }
-
-    foreach ($exe in $executables) {
-        $outFile = Join-Path $HelpDir ($exe.BaseName + ".txt")
-        try {
-            $args = $helpCmd -split "\s+"
-            $output = & $exe.FullName @($args) 2>&1
-
-            $filteredOutput = $output | Where-Object { $_.ToString().Trim() -ne "" }
-
-            if ($filteredOutput) {
-                $filteredOutput | Out-File -FilePath $outFile -Encoding utf8
-                $generatedFiles++
-            } else {
-                Write-Warning "Empty help output for $($exe.Name)"
-            }
-        }
-        catch {
-            Write-Warning "Error generating help for $($exe.Name): $_"
-        }
-    }
+    $generatedFiles = Write-HelpForExecutables -RootDir $DestDir -HelpDir $HelpDir -DefaultHelpSwitch $helpCmd -ExcludeExeNames $exclude
 
     if ($ModuleName -match '^(mysql|mariadb)') {
-        # --- Perl-скрипты (*.pl) ---
         $perlScripts = Get-ChildItem -Path $DestDir -Recurse -Filter *.pl -ErrorAction SilentlyContinue
         foreach ($pl in $perlScripts) {
             $outFile = Join-Path $HelpDir ($pl.Name + ".txt")
             try {
                 $output = & perl $pl.FullName --help 2>&1
                 $filteredOutput = $output | Where-Object { $_.ToString().Trim() -ne "" }
-                if ($filteredOutput) {
-                    $filteredOutput | Out-File -FilePath $outFile -Encoding utf8
-                    $generatedFiles++
-                }
-            } catch {
-                Write-Warning "Error generating help for perl script $($pl.Name): $_"
-            }
+                if ($filteredOutput) { $filteredOutput | Out-File -FilePath $outFile -Encoding utf8; $generatedFiles++ }
+            } catch { Write-Warning "Error generating help for perl script $($pl.Name): $_" }
         }
-
-        # --- ibd2sdi.exe ---
         $ibd2sdi = Join-Path $DestDir "bin\ibd2sdi.exe"
         if (Test-Path $ibd2sdi) {
             try {
                 $outFile = Join-Path $HelpDir "ibd2sdi.txt"
                 $output = & $ibd2sdi --help 2>&1
                 $filteredOutput = $output | Where-Object { $_.ToString().Trim() -ne "" }
-                if ($filteredOutput) {
-                    $filteredOutput | Out-File -FilePath $outFile -Encoding utf8
-                    $generatedFiles++
-                }
-            } catch {
-                Write-Warning "Error generating help for ibd2sdi.exe: $_"
-            }
+                if ($filteredOutput) { $filteredOutput | Out-File -FilePath $outFile -Encoding utf8; $generatedFiles++ }
+            } catch { Write-Warning "Error generating help for ibd2sdi.exe: $_" }
         }
-
-        # --- mysqld.exe ---
         $mysqld = Join-Path $DestDir "bin\mysqld.exe"
         if (Test-Path $mysqld) {
             try {
                 $outFile = Join-Path $HelpDir "mysqld.txt"
                 $output = & $mysqld --verbose --help 2>&1
                 $filteredOutput = $output | Where-Object { $_.ToString().Trim() -ne "" }
-                if ($filteredOutput) {
-                    $filteredOutput | Out-File -FilePath $outFile -Encoding utf8
-                    $generatedFiles++
-                }
-            } catch {
-                Write-Warning "Error generating help for mysqld.exe: $_"
-            }
+                if ($filteredOutput) { $filteredOutput | Out-File -FilePath $outFile -Encoding utf8; $generatedFiles++ }
+            } catch { Write-Warning "Error generating help for mysqld.exe: $_" }
         }
-
-        # --- mariadbd.exe ---
         $mariadbd = Join-Path $DestDir "bin\mariadbd.exe"
         if (Test-Path $mariadbd) {
             try {
                 $outFile = Join-Path $HelpDir "mariadbd.txt"
                 $output = & $mariadbd --verbose --help 2>&1
                 $filteredOutput = $output | Where-Object { $_.ToString().Trim() -ne "" }
-                if ($filteredOutput) {
-                    $filteredOutput | Out-File -FilePath $outFile -Encoding utf8
-                    $generatedFiles++
-                }
-            } catch {
-                Write-Warning "Error generating help for mariadbd.exe: $_"
-            }
+                if ($filteredOutput) { $filteredOutput | Out-File -FilePath $outFile -Encoding utf8; $generatedFiles++ }
+            } catch { Write-Warning "Error generating help for mariadbd.exe: $_" }
         }
-
         Write-Success "Created $generatedFiles module help files for MySQL/MariaDB"
         return
     }
-
     Write-Success "Created $generatedFiles module help files"
 }
 
 function Generate-ModuleIniFile {
-    <#
-    .SYNOPSIS
-    Creates module.ini file for module
-
-    .PARAMETER DestDir
-    Module directory
-
-    .PARAMETER Module
-    Module object with settings
-    #>
     param([string]$DestDir, [object]$Module)
-
-    Write-Progress "CONFIGURATION" "Creating module.ini"
-
+    Write-Stage "CONFIGURATION" "Creating module.ini"
     $IniPath = "$DestDir\ospanel_data\module.ini"
-
-    # Section order in INI file
     $sectionsOrder = @("main", "docs")
     $skipSections = @("DownloadUrl", "ZipPath", "help", "DownloadUrl_bin", "DownloadUrl_ext")
-
     $iniContent = @()
-
-    # Add sections in specific order
     foreach ($sec in $sectionsOrder) {
-        if ($Module.PSObject.Properties.Name -contains $sec) {
-            $iniContent += Convert-ToIni -SectionName $sec -Data $Module.$sec
-            $iniContent += ""
-        }
+        if ($Module.PSObject.Properties.Name -contains $sec) { $iniContent += Convert-ToIni -SectionName $sec -Data $Module.$sec; $iniContent += "" }
     }
-
-    # Add other sections
     $otherSections = $Module.PSObject.Properties.Name |
                      Where-Object { $sectionsOrder -notcontains $_ -and $skipSections -notcontains $_ } |
                      Sort-Object
-
-    foreach ($sec in $otherSections) {
-        $iniContent += Convert-ToIni -SectionName $sec -Data $Module.$sec
-        $iniContent += ""
-    }
-
-    # Create directory and save file
+    foreach ($sec in $otherSections) { $iniContent += Convert-ToIni -SectionName $sec -Data $Module.$sec; $iniContent += "" }
     $iniDir = Split-Path $IniPath -Parent
-    if (-not (Test-Path $iniDir)) {
-        New-Item -ItemType Directory -Force -Path $iniDir | Out-Null
-    }
-
+    if (-not (Test-Path $iniDir)) { New-Item -ItemType Directory -Force -Path $iniDir | Out-Null }
     $iniContent | Out-File -FilePath $IniPath -Encoding utf8 -Force
     Write-Success "module.ini file created"
 }
 
 function Copy-ModuleBundleFiles {
-    <#
-    .SYNOPSIS
-    Copies additional files from module bundle
-
-    .PARAMETER ModuleName
-    Module name
-
-    .PARAMETER DestDir
-    Destination directory
-    #>
     param([string]$ModuleName, [string]$DestDir)
-
     $bundleSrc = "..\resources\modules\$ModuleName"
-
     if (Test-Path $bundleSrc) {
-        Write-Progress "COPYING" "Additional files from module bundle"
-
-        try {
-            Copy-Item -Path (Join-Path $bundleSrc "*") -Destination $DestDir -Recurse -Force
-            Write-Success "Additional module files copied"
-        }
-        catch {
-            Write-Warning "Error copying additional module files: $_"
-        }
+        Write-Stage "COPYING" "Additional files from module bundle"
+        try { Copy-Item -Path (Join-Path $bundleSrc "*") -Destination $DestDir -Recurse -Force; Write-Success "Additional module files copied" }
+        catch { Write-Warning "Error copying additional module files: $_" }
     }
 }
-
-function Get-ModulesList {
-    <#
-    .SYNOPSIS
-    Loads and parses module list from JSON
-    #>
-
-    try {
-        Write-Progress "SYSTEM" "Loading modules configuration"
-
-        $infodata = Get-Content $JsonPath -Raw | ConvertFrom-Json
-        $modules = $infodata.modules.PSObject.Properties.Name | Sort-Object -Unique
-
-        $script:TotalModules = $modules.Count
-        Write-Success "Loaded $($script:TotalModules) modules from configuration"
-
-        return @{
-            InfoData = $infodata
-            Modules = $modules
-        }
-    }
-    catch {
-        Write-Error "Error loading modules configuration: $_"
-        return $null
-    }
-}
-
-# =====================================================
 
 # ================== MAIN EXECUTION BLOCK ==================
 Write-Banner "AUTOMATED OSPANEL ADDONS AND UTILITIES BUILD" "Cyan"
 Write-Host ""
 
 $folders = @("..\addons", "..\modules", "..\bin", "..\config", "..\data", "..\user\geo")
-
 foreach ($folder in $folders) {
     if (-not (Test-Path $folder)) {
         New-Item -ItemType Directory -Path $folder -Force | Out-Null
@@ -3525,103 +1513,52 @@ foreach ($folder in $folders) {
 
 # STEP 1: Prerequisites Check
 $script:CurrentMainStep = 1
-
 Write-Host ""
 Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): PREREQUISITES CHECK" "Cyan"
-
 Write-Host ""
-
-if (-not (Test-Prerequisites)) {
-    exit 1
-}
+if (-not (Test-Prerequisites)) { exit 1 }
 
 # STEP 2: Addon Processing
 $script:CurrentMainStep = 2
 $config = Get-AddonsList
-if (-not $config) {
-    Write-Error "Failed to load addon configuration"
-    exit 1
-}
-
+if (-not $config) { Write-Error "Failed to load addon configuration"; exit 1 }
 $infodata = $config.InfoData
 $addons = $config.Addons
 Write-Host ""
 Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): PROCESSING ADDONS" "Yellow"
 
-# Main addon processing loop
 foreach ($AddonName in $addons) {
     $script:ProcessedAddons++
-
     Write-Host ""
     Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host " ADDON: $AddonName [$script:ProcessedAddons/$script:TotalAddons]" -ForegroundColor Cyan
     Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host ""
-
     $addon = $infodata.addons.$AddonName
-
-    # Check for download URL
-    if (-not $addon.DownloadUrl) {
-        Write-Skip "Addon '$AddonName' skipped (missing DownloadUrl)"
-        $script:SkippedAddons++
-        continue
-    }
-
-    # Define paths
+    if (-not $addon.DownloadUrl) { Write-Skip "Addon '$AddonName' skipped (missing DownloadUrl)"; $script:SkippedAddons++; continue }
     $DestDir = Join-Path $BaseAddonsDir $AddonName
-
-    # Check if addon folder exists
-    if (Test-Path $DestDir) {
-        Write-Skip "Addon '$AddonName' skipped (folder already exists)"
-        $script:SkippedAddons++
-        continue
-    }
-
+    if (Test-Path $DestDir) { Write-Skip "Addon '$AddonName' skipped (folder already exists)"; $script:SkippedAddons++; continue }
     $ZipPath = "addon.zip"
-
     try {
-        # Special processing for InstantClient
         if ($AddonName -eq "InstantClient") {
-            # 2.1-2.2: Download & Extract (combined for InstantClient)
             $script:CurrentAddonSubStep = 1
-            if (-not (Extract-Addon -AddonName $AddonName -ZipPath "" -DestDir $DestDir -DownloadUrl $addon.DownloadUrl)) {
-                $script:FailedAddons++
-                continue
-            }
+            if (-not (Extract-Addon -AddonName $AddonName -ZipPath "" -DestDir $DestDir -DownloadUrl $addon.DownloadUrl)) { $script:FailedAddons++; continue }
         } else {
-            # 2.1: Download addon
             $script:CurrentAddonSubStep = 1
-            if (-not (Download-Addon -DownloadUrl $addon.DownloadUrl -ZipPath $ZipPath)) {
-                $script:FailedAddons++
-                continue
-            }
-
-            # 2.2: Extract archive
+            if (-not (Download-Addon -DownloadUrl $addon.DownloadUrl -ZipPath $ZipPath)) { $script:FailedAddons++; continue }
             $script:CurrentAddonSubStep = 2
-            if (-not (Extract-Addon -AddonName $AddonName -ZipPath $ZipPath -DestDir $DestDir)) {
-                $script:FailedAddons++
-                continue
-            }
+            if (-not (Extract-Addon -AddonName $AddonName -ZipPath $ZipPath -DestDir $DestDir)) { $script:FailedAddons++; continue }
         }
-
-        # 2.3: Generate help files
         $script:CurrentAddonSubStep = 3
         Generate-HelpFiles -AddonName $AddonName -DestDir $DestDir -Addon $addon
-
-        # 2.4: Create addon.ini
         $script:CurrentAddonSubStep = 4
         Generate-IniFile -DestDir $DestDir -Addon $addon
-
-        # 2.5: Copy additional files
         $script:CurrentAddonSubStep = 5
         Copy-BundleFiles -AddonName $AddonName -DestDir $DestDir
-
-        # 2.6: Success
         $script:CurrentAddonSubStep = 6
         Write-Success "Addon '$AddonName' successfully processed"
         $script:CurrentAddonSubStep = 0
-    }
-    catch {
+    } catch {
         Write-Error "Critical error processing '$AddonName': $_"
         $script:FailedAddons++
         $script:CurrentAddonSubStep = 0
@@ -3642,78 +1579,32 @@ if (-not $moduleConfig) {
 } else {
     $modules = $moduleConfig.Modules
     $moduleInfodata = $moduleConfig.InfoData
-
     Write-Host ""
     Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): PROCESSING MODULES" "Yellow"
-
-    # Create base modules directory
     $BaseModulesDir = "..\modules"
-    if (-not (Test-Path $BaseModulesDir)) {
-        New-Item -ItemType Directory -Path $BaseModulesDir -Force | Out-Null
-    }
-
-    # Main module processing loop
+    if (-not (Test-Path $BaseModulesDir)) { New-Item -ItemType Directory -Path $BaseModulesDir -Force | Out-Null }
     foreach ($ModuleName in $modules) {
         $script:ProcessedModules++
-
         Write-Host ""
         Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         Write-Host " MODULE: $ModuleName [$script:ProcessedModules/$script:TotalModules]" -ForegroundColor Cyan
         Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         Write-Host ""
-
         $module = $moduleInfodata.modules.$ModuleName
-
-        # Check for download URL
-        if (-not $module.DownloadUrl) {
-            Write-Skip "Module '$ModuleName' skipped (missing DownloadUrl)"
-            $script:SkippedModules++
-            continue
-        }
-
-        # Define paths
+        if (-not $module.DownloadUrl) { Write-Skip "Module '$ModuleName' skipped (missing DownloadUrl)"; $script:SkippedModules++; continue }
         $DestDir = Join-Path $BaseModulesDir $ModuleName
-
-        # Check if module folder exists
-        if (Test-Path $DestDir) {
-            Write-Skip "Module '$ModuleName' skipped (folder already exists)"
-            $script:SkippedModules++
-            continue
-        }
-
+        if (Test-Path $DestDir) { Write-Skip "Module '$ModuleName' skipped (folder already exists)"; $script:SkippedModules++; continue }
         $ZipPath = "module.zip"
-
         try {
-            # Create module directory structure
             $ospanelDataDir = Join-Path $DestDir "ospanel_data\help"
-            if (-not (Test-Path $ospanelDataDir)) {
-                New-Item -ItemType Directory -Force -Path $ospanelDataDir | Out-Null
-            }
-
-            # Download module
-            if (-not (Download-Addon -DownloadUrl $module.DownloadUrl -ZipPath $ZipPath)) {
-                $script:FailedModules++
-                continue
-            }
-
-            # Extract and process module
-            if (-not (Extract-Module -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir)) {
-                $script:FailedModules++
-                continue
-            }
-
-            # Generate help files
+            if (-not (Test-Path $ospanelDataDir)) { New-Item -ItemType Directory -Force -Path $ospanelDataDir | Out-Null }
+            if (-not (Download-Addon -DownloadUrl $module.DownloadUrl -ZipPath $ZipPath)) { $script:FailedModules++; continue }
+            if (-not (Extract-Module -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir)) { $script:FailedModules++; continue }
             Generate-ModuleHelpFiles -ModuleName $ModuleName -DestDir $DestDir -Module $module
-
-            # Copy additional files from bundle
             Copy-ModuleBundleFiles -ModuleName $ModuleName -DestDir $DestDir
-
-            # Create module.ini
             Generate-ModuleIniFile -DestDir $DestDir -Module $module
-
             Write-Success "Module '$ModuleName' successfully processed"
-        }
-        catch {
+        } catch {
             Write-Error "Critical error processing '$ModuleName': $_"
             $script:FailedModules++
         }
@@ -3723,67 +1614,42 @@ if (-not $moduleConfig) {
 # STEP 5: Utility Processing
 $script:CurrentMainStep = 5
 $binMatrix = Get-ToolsList
-if (-not $binMatrix) {
-    Write-Error "Failed to load utility configuration"
-    exit 1
-}
+if (-not $binMatrix) { Write-Error "Failed to load utility configuration"; exit 1 }
 Write-Host ""
 Write-Banner "STEP $($script:CurrentMainStep)/$($script:TotalMainSteps): INSTALLING SYSTEM UTILITIES" "Yellow"
-
-# Create necessary directories for utilities
-if (-not (Test-Path $BaseBinDir)) {
-    New-Item $BaseBinDir -ItemType Directory -Force | Out-Null
-}
-
+if (-not (Test-Path $BaseBinDir)) { New-Item $BaseBinDir -ItemType Directory -Force | Out-Null }
 $helpDir = Join-Path $BaseBinDir "help"
-if (-not (Test-Path $helpDir)) {
-    New-Item $helpDir -ItemType Directory -Force | Out-Null
-}
+if (-not (Test-Path $helpDir)) { New-Item $helpDir -ItemType Directory -Force | Out-Null }
 
-# Main utility processing loop
 foreach ($tool in $binMatrix.tools) {
     $script:ProcessedTools++
-
     Write-Host ""
     Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host " UTILITY: $($tool.name) [$script:ProcessedTools/$script:TotalTools]" -ForegroundColor Cyan
     Write-Host "────────────────────────────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host ""
-
     try {
-        # 4.1: Install utility
         $script:CurrentToolSubStep = 1
         if ($tool.direct_download) {
             Install-DirectDownload -Url $tool.url -TargetName $tool.target_name
-        }
-        elseif ($tool.url -eq "local" -and $tool.local_zip) {
+        } elseif ($tool.url -eq "local" -and $tool.local_zip) {
             Install-FromLocalArchive -LocalZip $tool.local_zip -Files $tool.files
-        }
-        elseif ($tool.url -eq "local" -and $tool.local_files) {
+        } elseif ($tool.url -eq "local" -and $tool.local_files) {
             Install-LocalFiles -LocalFiles $tool.local_files
-        }
-        else {
+        } else {
             $copyFiles = if ($tool.copy_files) { $tool.copy_files } else { @() }
             Install-ToolFromArchive -Url $tool.url -ExtractPath $tool.extract_path -Files $tool.files -CopyFiles $copyFiles
         }
-
-        # 4.2: Generate help
         $script:CurrentToolSubStep = 2
         if ($tool.help_command) {
             Generate-ToolHelp -Command $tool.help_command
+        } elseif ($tool.help_commands) {
+            foreach ($helpCmd in $tool.help_commands) { Generate-ToolHelp -Command $helpCmd.command -OutputFile $helpCmd.output }
         }
-        elseif ($tool.help_commands) {
-            foreach ($helpCmd in $tool.help_commands) {
-                Generate-ToolHelp -Command $helpCmd.command -OutputFile $helpCmd.output
-            }
-        }
-
-        # 4.3: Success
         $script:CurrentToolSubStep = 3
         Write-Success "Utility '$($tool.name)' successfully installed"
         $script:CurrentToolSubStep = 0
-    }
-    catch {
+    } catch {
         Write-Error "Critical error installing '$($tool.name)': $_"
         $script:FailedTools++
         $script:CurrentToolSubStep = 0
@@ -3810,8 +1676,6 @@ Show-Summary
 
 # Root folder. By default, one level above the script's folder. Set an explicit path if needed.
 $Root = Split-Path -Parent $PSScriptRoot
-# Example: $Root = "C:\Path\to\folder"
-
 # Regex: C:\Portable\Documents\Git\OSPanel\modules\ + any characters up to \bin\
 $pattern = [regex]::Escape("C:\Portable\Documents\Git\OSPanel\modules\") + ".*?" + [regex]::Escape("\bin\")
 $regex = New-Object System.Text.RegularExpressions.Regex($pattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)
@@ -3823,26 +1687,19 @@ $errors = 0
 Get-ChildItem -Path $Root -Filter *.txt -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
     $file = $_.FullName
     try {
-        # Read entire file as a single string
         $content = Get-Content -LiteralPath $file -Raw -ErrorAction Stop
-
-        # Remove matching substrings
         $newContent = $regex.Replace($content, "")
-
-        # Save only if content changed
         if ($newContent -ne $content) {
             Set-Content -LiteralPath $file -Value $newContent -Encoding UTF8
             $changed++
         }
         $processed++
-    }
-    catch {
+    } catch {
         Write-Host "Error: $file - $($_.Exception.Message)" -ForegroundColor Red
         $errors++
     }
 }
 
-# ==================== MANUAL UPDATE NOTICE ====================
 Write-Banner "MANUAL UPDATE REQUIRED" "Yellow"
 Write-Host ""
 Write-Host "⚠️  " -ForegroundColor Yellow -NoNewline
