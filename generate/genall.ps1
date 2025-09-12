@@ -1,11 +1,9 @@
 # ================================================================================
-#                    AUTOMATED OSPANEL ADDONS AND UTILITIES BUILD SCRIPT
+#              AUTOMATED OSPANEL ADDONS AND UTILITIES BUILD SCRIPT
 # ================================================================================
 # Description: Automated OSPanel addons build from JSON configuration
 #              and system utilities installation
-# Author:      OSPanel Team
-# Version:     2.1
-# Date:        2025
+# Author:      OSPanel Dev Team
 # ================================================================================
 
 $env:LC_ALL = "en_US.UTF-8"; $env:LANG = "en_US.UTF-8"
