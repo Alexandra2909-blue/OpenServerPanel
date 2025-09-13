@@ -217,8 +217,6 @@ StopDownload=Ви дійсно бажаєте перервати заванта�
 ErrorDownloadAborted=Завантаження перервано
 ErrorDownloadFailed=Помилка завантаження: %1 %2
 ErrorDownloadSizeFailed=Помилка отримання розміру: %1 %2
-ErrorFileHash1=Помилка хешу файлу: %1
-ErrorFileHash2=Невірний хеш файлу: очікувався %1, отриманий %2
 ErrorProgress=Помилка виконання: %1 з %2
 ErrorFileSize=Невірний розмір файлу: очікувався %1, отриманий %2
 
