@@ -119,8 +119,8 @@ Name: "addons\erlang\erlang26";        Description: "Erlang/OTP 26.2 (RabbitMQ-3
 Name: "addons\erlang\erlang27";        Description: "Erlang/OTP 27.3 (RabbitMQ-4.x)";     Types: full;            Flags: disablenouninstallwarning
 
 Name: "addons\mongo";                  Description: "Дополнения для MongoDB";
-Name: "addons\mongo\mdbtools";         Description: "MongoDB Tools 100.13";  Types: full;                         Flags: disablenouninstallwarning
-Name: "addons\mongo\mdbshell";         Description: "MongoDB Shell 2.5";     Types: full;                         Flags: disablenouninstallwarning
+Name: "addons\mongo\mongotools";       Description: "MongoDB Tools 100.13";  Types: full;                         Flags: disablenouninstallwarning
+Name: "addons\mongo\mongoshell";       Description: "MongoDB Shell 2.5";     Types: full;                         Flags: disablenouninstallwarning
 
 Name: "addons\nvms";                   Description: "Менеджер версий Node.js";
 Name: "addons\nvms\nvm";               Description: "NVM 1.1";               Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer       
@@ -209,8 +209,8 @@ Source: "addons\ImageMagick-vs16\*";                              DestDir: "{app
 Source: "addons\ImageMagick-vs17\*";                              DestDir: "{app}\addons\ImageMagick-vs17";       Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\im17;                         Permissions: users-full
 Source: "addons\InstantClient\*";                                 DestDir: "{app}\addons\InstantClient";          Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\oic;                          Permissions: users-full
 Source: "addons\Libwebp\*";                                       DestDir: "{app}\addons\Libwebp";                Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\libwebp;                      Permissions: users-full
-Source: "addons\MDBTools\*";                                      DestDir: "{app}\addons\MDBTools";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\mongo\mdbtools;                   Permissions: users-full
-Source: "addons\MongoShell\*";                                    DestDir: "{app}\addons\MongoShell";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\mongo\mdbshell;                   Permissions: users-full
+Source: "addons\MongoShell\*";                                    DestDir: "{app}\addons\MongoShell";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\mongo\mongoshell;                 Permissions: users-full
+Source: "addons\MongoTools\*";                                    DestDir: "{app}\addons\MongoTools";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\mongo\mongotools;                 Permissions: users-full
 Source: "addons\NVM\*";                                           DestDir: "{app}\addons\NVM";                    Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\nvms\nvm;                         Permissions: users-full
 Source: "addons\Perl\*";                                          DestDir: "{app}\addons\Perl";                   Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\apache\perl;                      Permissions: users-full
 Source: "addons\ErlangOTP-26\*";                                  DestDir: "{app}\addons\ErlangOTP-26";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\erlang\erlang26;                  Permissions: users-full
