@@ -1,18 +1,18 @@
-﻿; *** Inno Setup version 6.1.0+ Ukrainian messages ***
+﻿; *** Inno Setup version 6.5.0+ Ukrainian messages ***
 ; Author: Dmytro Onyshchuk
 ; E-Mail: mrlols3@gmail.com
 ; Please report all spelling/grammar errors, and observations.
 ; Version 2020.08.04
+; Updated and Reviewed on 21.06.2025 by Sergii Leonov (5IM0f0R@ukr.net)
 
-; *** Український переклад Inno Setup для версії 6.1.0 та вище***
+; *** Український переклад Inno Setup для версії 6.5.0 та вище***
 ; Автор перекладу: Дмитро Онищук
 ; E-Mail: mrlols3@gmail.com
 ; Будь ласка, повідомляйте про всі знайдені помилки та зауваження.
 ; Версія перекладу 2020.08.04
+; Оновлено та переглянуто 21.06.2025, Сергій Леонов (5IM0f0R@ukr.net)
 
 [LangOptions]
-; The following three entries are very important. Be sure to read and
-; understand the '[LangOptions] section' topic in the help file.
 LanguageName=<0423><043A><0440><0430><0457><043D><0441><044C><043A><0430>
 LanguageID=$0422
 LanguageCodePage=0
@@ -41,12 +41,12 @@ ErrorTitle=Помилка
 ; *** SetupLdr messages
 SetupLdrStartupMessage=Ця програма встановить %1 на ваш комп'ютер, бажаєте продовжити?
 LdrCannotCreateTemp=Неможливо створити тимчасовий файл. Встановлення перервано
-LdrCannotExecTemp=Неможливо виконати файл в тимчасовій папці. Встановлення перервано
+LdrCannotExecTemp=Неможливо виконати файл у тимчасовій теці. Встановлення перервано
 HelpTextNote=
 
 ; *** Startup error messages
 LastErrorMessage=%1.%n%nПомилка %2: %3
-SetupFileMissing=Файл %1 відсутній в папці встановлення. Будь ласка, виправте цю помилку або отримайте нову копію програми.
+SetupFileMissing=Файл %1 відсутній у теці встановлення. Будь ласка, виправте цю помилку або отримайте нову копію програми.
 SetupFileCorrupt=Файли встановлення пошкоджені. Будь ласка, отримайте нову копію програми.
 SetupFileCorruptOrWrongVer=Файли встановлення пошкоджені або несумісні з цією версією програми встановлення. Будь ласка, виправте цю помилку або отримайте нову копію програми.
 InvalidParameter=Командний рядок містить недопустимий параметр:%n%n%1
@@ -73,9 +73,9 @@ PrivilegesRequiredOverrideAllUsersRecommended=Встановити для &вс�
 PrivilegesRequiredOverrideCurrentUser=Встановити тільки для мене
 PrivilegesRequiredOverrideCurrentUserRecommended=Встановити тільки для &мене (рекомендується)
 
-; *** Різні помилки
-ErrorCreatingDir=Програмі встановлення не вдалося створити папку "%1"
-ErrorTooManyFilesInDir=Програмі встановлення не вдалося створити файл в папці "%1", тому що в ньому занадто багато файлів
+; *** Misc. errors
+ErrorCreatingDir=Програмі встановлення не вдалося створити теку "%1"
+ErrorTooManyFilesInDir=Програмі встановлення не вдалося створити файл у теці "%1", тому що в ньому занадто багато файлів
 
 ; *** Спільні повідомлення програми
 ExitSetupTitle=Вихід з програми встановлення
@@ -99,7 +99,7 @@ ButtonNoToAll=Н&і для Всіх
 ButtonFinish=&Готово
 ButtonBrowse=&Огляд...
 ButtonWizardBrowse=О&гляд...
-ButtonNewFolder=&Створити папку
+ButtonNewFolder=&Створити теку
 
 ; *** Діалогове повідомлення "Вибір мови"
 SelectLanguageTitle=Виберіть мову встановлення
@@ -108,9 +108,9 @@ SelectLanguageLabel=Виберіть мову, яка буде використ�
 ; *** Спільний тест програми
 ClickNext=Натисніть «Далі», щоб продовжити, або «Скасувати» для виходу з програми встановлення.
 BeveledLabel=
-BrowseDialogTitle=Огляд папок
-BrowseDialogLabel=Виберіть папку зі списку та натисніть «ОК».
-NewFolderName=Нова папка
+BrowseDialogTitle=Огляд тек
+BrowseDialogLabel=Виберіть теку зі списку та натисніть «ОК».
+NewFolderName=Нова тека
 
 ; *** Сторінка "Привітання"
 WelcomeLabel1=Ласкаво просимо до програми встановлення [name].
@@ -187,16 +187,16 @@ WizardSelectTasks=Вибір додаткових завдань
 SelectTasksDesc=Які додаткові завдання ви бажаєте виконати?
 SelectTasksLabel2=Виберіть додаткові завдання які програма встановлення [name] повинна виконати, потім натисніть «Далі».
 
-; *** Сторінка "Вибір папки в меню «Пуск»"
-WizardSelectProgramGroup=Вибір папки в меню «Пуск»
+; *** "Select Start Menu Folder" wizard page
+WizardSelectProgramGroup=Вибір теки в меню «Пуск»
 SelectStartMenuFolderDesc=Де ви бажаєте створити ярлики?
-SelectStartMenuFolderLabel3=Програма встановлення створить ярлики у наступній папці меню «Пуск».
-SelectStartMenuFolderBrowseLabel=Натисніть «Далі», щоб продовжити. Якщо ви бажаєте вибрати іншу папку, натисніть «Огляд».
-MustEnterGroupName=Ви повинні ввести ім'я папки.
-GroupNameTooLong=Ім’я папки або шлях до неї перевищують допустиму довжину.
-InvalidGroupName=Вказане ім’я папки недопустиме.
-BadGroupName=Ім'я папки не може включати наступні символи:%n%n%1
-NoProgramGroupCheck2=&Не створювати папку в меню «Пуск»
+SelectStartMenuFolderLabel3=Програма встановлення створить ярлики у наступній теці меню «Пуск».
+SelectStartMenuFolderBrowseLabel=Натисніть «Далі», щоб продовжити. Якщо ви бажаєте вибрати іншу теку, натисніть «Огляд».
+MustEnterGroupName=Ви повинні ввести ім'я теки.
+GroupNameTooLong=Ім’я теки або шлях до неї перевищують допустиму довжину.
+InvalidGroupName=Вказане ім’я теки недопустиме.
+BadGroupName=Ім'я теки не може включати наступні символи:%n%n%1
+NoProgramGroupCheck2=&Не створювати теку в меню «Пуск»
 
 ; *** Сторінка "Усе готово до встановлення"
 WizardReady=Усе готово до встановлення
@@ -207,11 +207,11 @@ ReadyMemoUserInfo=Дані про користувача:
 ReadyMemoDir=Шлях встановлення:
 ReadyMemoType=Тип встановлення:
 ReadyMemoComponents=Вибрані компоненти:
-ReadyMemoGroup=Папка в меню «Пуск»:
+ReadyMemoGroup=Тека в меню «Пуск»:
 ReadyMemoTasks=Додаткові завдання:
 
 ; *** TDownloadWizardPage wizard page and DownloadTemporaryFile
-DownloadingLabel=Завантаження додаткових файлів...
+DownloadingLabel2=Завантаження файлів...
 ButtonStopDownload=&Перервати завантаження
 StopDownload=Ви дійсно бажаєте перервати завантаження?
 ErrorDownloadAborted=Завантаження перервано
@@ -222,7 +222,19 @@ ErrorFileHash2=Невірний хеш файлу: очікувався %1, от
 ErrorProgress=Помилка виконання: %1 з %2
 ErrorFileSize=Невірний розмір файлу: очікувався %1, отриманий %2
 
-; *** Сторінка "Підготовка до встановлення"
+; *** TExtractionWizardPage wizard page and ExtractArchive
+ExtractingLabel=Розпакування файлів...
+ButtonStopExtraction=&Перервати розпакування
+StopExtraction=Ви дійсно бажаєте перервати розпакування?
+ErrorExtractionAborted=Розпакування перервано
+ErrorExtractionFailed=Помилка розпакування: %1
+
+; *** Archive extraction failure details
+ArchiveIncorrectPassword=Пароль невірний
+ArchiveIsCorrupted=Архів зіпсований
+ArchiveUnsupportedFormat=Формат архіву не підтримується
+
+; *** "Preparing to Install" wizard page
 WizardPreparing=Підготовка до встановлення
 PreparingDesc=Програма встановлення готується до встановлення [name] на ваш комп’ютер.
 PreviousInstallNotCompleted=Встановлення або видалення попередньої програми не було завершено. Вам потрібно перезавантажити ваш комп’ютер для завершення минулого встановлення.%n%nПісля перезавантаження відкрийте програму встановлення знову, щоб завершити встановлення [name].
@@ -255,9 +267,9 @@ RunEntryShellExec=Переглянути %1
 
 ; *** "Setup Needs the Next Disk" stuff
 ChangeDiskTitle=Необхідно вставити наступний диск
-SelectDiskLabel2=Будь ласка, вставте диск %1 і натисніть «OK».%n%nЯкщо потрібні файли можуть знаходитися в іншій папці, на відміну від вказаної нижче, введіть правильний шлях або натисніть «Огляд».
+SelectDiskLabel2=Будь ласка, вставте диск %1 і натисніть «OK».%n%nЯкщо потрібні файли можуть знаходитися у іншій теці, на відміну від вказаної нижче, введіть правильний шлях або натисніть «Огляд».
 PathLabel=&Шлях:
-FileNotInDir2=Файл "%1" не знайдений в "%2". Будь ласка, вставте належний диск або вкажіть іншу папку.
+FileNotInDir2=Файл "%1" не знайдений в "%2". Будь ласка, вставте належний диск або вкажіть іншу теку.
 SelectDirectoryLabel=Будь ласка, вкажіть шлях до наступного диску.
 
 ; *** Installation phase messages
@@ -265,12 +277,16 @@ SetupAborted=Встановлення не завершено.%n%nБудь ла�
 AbortRetryIgnoreSelectAction=Виберіть дію
 AbortRetryIgnoreRetry=&Спробувати знову
 AbortRetryIgnoreIgnore=&Ігнорувати помилку та продовжити
-AbortRetryIgnoreCancel=Відмінити встановлення
+AbortRetryIgnoreCancel=Скасувати встановлення
+RetryCancelSelectAction=Виберіть дію
+RetryCancelRetry=&Спробувати знову
+RetryCancelCancel=Скасувати
 
 ; *** Повідомлення стану встановлення
 StatusClosingApplications=Закриття програм...
-StatusCreateDirs=Створення папок...
+StatusCreateDirs=Створення тек...
 StatusExtractFiles=Розпакування файлів...
+StatusDownloadFiles=Завантаження файлів...
 StatusCreateIcons=Створення ярликів...
 StatusCreateIniEntries=Створення INI записів...
 StatusCreateRegistryEntries=Створення записів реєстру...
@@ -295,11 +311,19 @@ ErrorRegWriteKey=Помилка запису в ключ реєстру:%n%1\%2
 ; *** Помилки INI
 ErrorIniEntry=Помилка при створенні запису в INI-файлі "%1".
 
-; *** Помилки копіювання файлів
-FileAbortRetryIgnoreSkipNotRecommended=&Пропустити файл (не рекомендується)
+; *** File copying errors
+FileAbortRetryIgnoreSkipNotRecommended=&Пропустити цей файл (не рекомендується)
 FileAbortRetryIgnoreIgnoreNotRecommended=&Ігнорувати помилку та продовжити (не рекомендується)
 SourceIsCorrupted=Вихідний файл пошкоджений
 SourceDoesntExist=Вихідний файл "%1" не існує
+SourceVerificationFailed=Перевірка вихідного файлу не вдалася: %1
+VerificationSignatureDoesntExist=Файл підпису "%1" не існує
+VerificationSignatureInvalid=Файл підпису "%1" є недійсним
+VerificationKeyNotFound=Файл підпису "%1" "%1" використовує невідомий ключ
+VerificationFileNameIncorrect=Ім'я файлу невірне
+VerificationFileTagIncorrect=Тег файлу невірний
+VerificationFileSizeIncorrect=Розмір файлу невірний
+VerificationFileHashIncorrect=Хеш файлу невірний
 ExistingFileReadOnly2=Неможливо замінити існуючий файл, оскільки він позначений лише для читання.
 ExistingFileReadOnlyRetry=&Видалити атрибут "лише читання" та спробувати знову
 ExistingFileReadOnlyKeepExisting=&Залишити існуючий файл
@@ -315,12 +339,14 @@ ExistingFileNewerOverwriteExisting=&Замінити існуючий файл
 ExistingFileNewerKeepExisting=&Зберегти існуючий файл (рекомендується)
 ExistingFileNewerOverwriteOrKeepAll=&Повторити дію для всіх подальших конфліктів
 ErrorChangingAttr=Виникла помилка при спробі зміни атрибутів існуючого файлу:
-ErrorCreatingTemp=Виникла помилка при спробі створення файлу в папці встановлення:
+ErrorCreatingTemp=Виникла помилка при спробі створення файлу у теці встановлення:
 ErrorReadingSource=Виникла помилка при спробі читання вихідного файлу:
 ErrorCopying=Виникла помилка при спробі копіювання файлу:
+ErrorDownloading=Виникла помилка при спробі завантажити файл:
+ErrorExtracting=Виникла помилка при спробі розпакування архіву:
 ErrorReplacingExistingFile=Виникла помилка при спробі заміни існуючого файлу:
 ErrorRestartReplace=Помилка RestartReplace:
-ErrorRenamingTemp=Виникла помилка при спробі перейменування файлу в папці встановлення:
+ErrorRenamingTemp=Виникла помилка при спробі перейменування файлу у теці встановлення:
 ErrorRegisterServer=Неможливо зареєструвати DLL/OCX: %1
 ErrorRegSvr32Failed=Помилка при виконанні RegSvr32, код повернення %1
 ErrorRegisterTypeLib=Неможливо зареєструвати бібліотеку типів: %1
@@ -347,7 +373,7 @@ UninstallOnlyOnWin64=Цю програму можливо видалити ли�
 OnlyAdminCanUninstall=Ця програма може бути видалена лише користувачем з правами адміністратора.
 UninstallStatusLabel=Будь ласка, зачекайте, поки %1 видалиться з вашого комп'ютера.
 UninstalledAll=%1 успішно видалено з вашого комп'ютера.
-UninstalledMost=Видалення %1 завершено.%n%nДеякі елемент неможливо видалити. Ви можете видалити їх вручну.
+UninstalledMost=Видалення %1 завершено.%n%nДеякі елементи неможливо видалити. Ви можете видалити їх вручну.
 UninstalledAndNeedsRestart=Для завершення видалення %1 необхідно перезавантажити ваш комп’ютер.%n%nПерезавантажити комп’ютер зараз?
 UninstallDataCorrupted=Файл "%1" пошкоджений. Видалення неможливе
 
@@ -380,7 +406,7 @@ AssocFileExtension=&Асоціювати %1 з розширенням файлу
 AssocingFileExtension=Асоціювання %1 з розширенням файлу %2...
 AutoStartProgramGroupDescription=Автозавантаження:
 AutoStartProgram=Автоматично завантажувати %1
-AddonHostProgramNotFound=%1 не знайдений у вказаній вами папці%n%nВи все одно бажаєте продовжити?
+AddonHostProgramNotFound=%1 не знайдений у вказаній вами теці%n%nВи все одно бажаєте продовжити?
 
 Allusrs=Для всіх користувачів
 Currusr=Тільки для поточного користувача
