@@ -44,8 +44,8 @@ AllowNoIcons            = yes
 AllowRootDirectory      = yes
 AllowUNCPath            = no
 AppMutex                = Global\OSPanel
-ArchitecturesAllowed    = x64
-ArchitecturesInstallIn64BitMode = x64
+ArchitecturesAllowed    = x64os
+ArchitecturesInstallIn64BitMode = x64os
 ChangesEnvironment      = yes
 CloseApplications       = no
 DefaultDirName          = {sd}\OSPanel
@@ -56,7 +56,7 @@ DisableReadyPage        = no
 DisableStartupPrompt    = yes
 DisableWelcomePage      = no
 MinVersion              = 6.1sp1
-PrivilegesRequired      = lowest 
+PrivilegesRequired      = lowest
 RestartApplications     = no
 SetupMutex              = Global\OSPSetup
 ShowLanguageDialog      = auto
@@ -73,10 +73,10 @@ WizardResizable         = yes
 
 [Languages]
 
-Name: "en";             MessagesFile: "resources\lang\en.isl";    LicenseFile: "LICENSE"; InfoBeforeFile: "resources\lang\en.txt"
-Name: "ru";             MessagesFile: "resources\lang\ru.isl";    LicenseFile: "LICENSE"; InfoBeforeFile: "resources\lang\ru.txt"
-Name: "ua";             MessagesFile: "resources\lang\ua.isl";    LicenseFile: "LICENSE"; InfoBeforeFile: "resources\lang\ua.txt"
-Name: "be";             MessagesFile: "resources\lang\be.isl";    LicenseFile: "LICENSE"; InfoBeforeFile: "resources\lang\be.txt"
+Name: "en";             MessagesFile: "resources\lang\en.isl";    LicenseFile: "resources\lang\license.en.txt"; InfoBeforeFile: "resources\lang\en.txt"
+Name: "ru";             MessagesFile: "resources\lang\ru.isl";    LicenseFile: "resources\lang\license.ru.txt"; InfoBeforeFile: "resources\lang\ru.txt"
+Name: "ua";             MessagesFile: "resources\lang\ua.isl";    LicenseFile: "resources\lang\license.ua.txt"; InfoBeforeFile: "resources\lang\ua.txt"
+Name: "be";             MessagesFile: "resources\lang\be.isl";    LicenseFile: "resources\lang\license.be.txt"; InfoBeforeFile: "resources\lang\be.txt"
 
 [Tasks]
 
@@ -104,7 +104,7 @@ Name: "addons\apache";                 Description: "Дополнения для
 Name: "addons\apache\perl";            Description: "Perl 5.32";             Types: full;                         Flags: disablenouninstallwarning
 
 Name: "addons\php";                    Description: "Дополнения для PHP";
-Name: "addons\php\blackfire";          Description: "Blackfire 2.28";        Types: full;                         Flags: disablenouninstallwarning
+Name: "addons\php\blackfire";          Description: "Blackfire 2.29";        Types: full;                         Flags: disablenouninstallwarning
 Name: "addons\php\db2odbc";            Description: "DB2 ODBC 11.5";         Types: full;                         Flags: disablenouninstallwarning
 Name: "addons\php\ffmpeg";             Description: "FFMpeg 7.1";            Types: full;                         Flags: disablenouninstallwarning
 Name: "addons\php\gs";                 Description: "Ghostscript 10.05";     Types: full compact;                 Flags: disablenouninstallwarning
@@ -129,12 +129,12 @@ Name: "addons\nvms\nvm";               Description: "NVM 1.1";               Typ
 Name: "modules";                       Description: "{cm:SubModules}";                                            Flags: disablenouninstallwarning
 
 Name: "modules\dns";                   Description: "DNS";                                                        Flags: disablenouninstallwarning
-Name: "modules\dns\bind";              Description: "Bind 9.16";             Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
+Name: "modules\dns\bind";              Description: "Bind 9.17";             Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
 Name: "modules\dns\unbound";           Description: "Unbound 1.23";          Types: full;                         Flags: disablenouninstallwarning
 
 Name: "modules\mail";                  Description: "Mail";                                                       Flags: disablenouninstallwarning
 Name: "modules\mail\mailpit";          Description: "Mailpit 1.27";          Types: full compact;                 Flags: disablenouninstallwarning
-Name: "modules\mail\smtp4dev";         Description: "Smtp4dev 3.8";          Types: full compact;                 Flags: disablenouninstallwarning
+Name: "modules\mail\smtp4dev";         Description: "Smtp4dev 3.9";          Types: full compact;                 Flags: disablenouninstallwarning
 
 Name: "modules\mariadb";               Description: "MariaDB";                                                    Flags: disablenouninstallwarning
 Name: "modules\mariadb\mariadb104";    Description: "MariaDB 10.4";          Types: full;                         Flags: disablenouninstallwarning
@@ -350,7 +350,7 @@ Source: "modules\PostgreSQL-17\ospanel_data\default_data\*";      DestDir: "{app
 
 Filename: "{app}\system\ssl\gen_root_cert.bat"; WorkingDir: "{app}\system\ssl"; StatusMsg: "{cm:GenCerts}";  Flags: runhidden waituntilterminated skipifdoesntexist; Components: core
 Filename: "{app}\system\ssl\add_root_to_certstore.bat"; WorkingDir: "{app}\system\ssl"; StatusMsg: "{cm:ImportingCert}"; Flags: runhidden waituntilterminated skipifdoesntexist skipifsilent; Tasks: import_cert
-Filename: "{app}\system\bin\syspreptool.exe"; Description: "{cm:RunSysPrep}"; Flags: postinstall nowait skipifdoesntexist skipifsilent; Components: core
+Filename: "{app}\bin\ospanel_sys_prep_tool.exe"; Description: "{cm:RunSysPrep}"; Flags: postinstall nowait skipifdoesntexist skipifsilent; Components: core
 
 [UninstallRun]
 
