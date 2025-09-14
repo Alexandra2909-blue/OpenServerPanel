@@ -435,3 +435,9 @@ WantToDeleteHomeFolder=Do you want to keep the project directory "home"?
 SubAddons=Add-ons
 SubDataPacks=Data Packs
 SubModules=Modules
+
+ApacheAddons=Add-ons for Apache
+PHPAddons=Add-ons for PHP
+RabbitMQAddons=Add-ons for RabbitMQ
+MongoDBAddons=Add-ons for MongoDB
+NodeJSVersionManager=Node.js Version Manager

@@ -13,7 +13,7 @@
 ; Оновлено та переглянуто 21.06.2025, Сергій Леонов (5IM0f0R@ukr.net)
 
 [LangOptions]
-LanguageName=<0423><043A><0440><0430><0457><043D><0441><044C><043A><0430>
+LanguageName=Українська
 LanguageID=$0422
 LanguageCodePage=0
 DialogFontName=Segoe UI
@@ -436,3 +436,9 @@ WantToDeleteHomeFolder=Ви хочете залишити каталог про�
 SubAddons=Доповнення
 SubDataPacks=Додаткові набори даних
 SubModules=Модулі
+
+ApacheAddons=Доповнення для Apache
+PHPAddons=Доповнення для PHP
+RabbitMQAddons=Доповнення для RabbitMQ
+MongoDBAddons=Доповнення для MongoDB
+NodeJSVersionManager=Менеджер версій Node.js

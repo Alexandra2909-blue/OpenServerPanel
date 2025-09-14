@@ -8,7 +8,7 @@
 ; two periods being displayed).
 
 [LangOptions]
-LanguageName=<0420><0443><0441><0441><043A><0438><0439>
+LanguageName=Русский
 LanguageID=$0419
 LanguageCodePage=0
 DialogFontName=Segoe UI
@@ -433,3 +433,9 @@ WantToDeleteHomeFolder=Вы хотите оставить каталог про�
 SubAddons=Дополнения
 SubDataPacks=Дополнительные наборы данных
 SubModules=Модули
+
+ApacheAddons=Дополнения для Apache
+PHPAddons=Дополнения для PHP
+RabbitMQAddons=Дополнения для RabbitMQ
+MongoDBAddons=Дополнения для MongoDB
+NodeJSVersionManager=Менеджер версий Node.js

@@ -1,7 +1,7 @@
 ﻿; *** Inno Setup version 6.5.0+ Belarusian messages ***
 
 [LangOptions]
-LanguageName=<0411><0435><043B><0430><0440><0443><0441><043A><0430><044F>
+LanguageName=Беларуская
 LanguageID=$0423
 LanguageCodePage=0
 DialogFontName=Segoe UI
@@ -425,3 +425,9 @@ WantToDeleteHomeFolder=Вы хочаце пакінуць каталог пра�
 SubAddons=Дапаўненні
 SubDataPacks=Дадатковыя наборы даных
 SubModules=Модулі
+
+ApacheAddons=Дапаўненні для Apache
+PHPAddons=Дапаўненні для PHP
+RabbitMQAddons=Дапаўненні для RabbitMQ
+MongoDBAddons=Дапаўненні для MongoDB
+NodeJSVersionManager=Кіраўнік версій Node.js
