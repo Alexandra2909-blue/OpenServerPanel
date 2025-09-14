@@ -55,7 +55,7 @@ DisableProgramGroupPage = no
 DisableReadyPage        = no
 DisableStartupPrompt    = yes
 DisableWelcomePage      = no
-MinVersion              = 6.1sp1
+MinVersion              = 10.0.10240
 PrivilegesRequired      = lowest
 RestartApplications     = no
 SetupMutex              = Global\OSPSetup
@@ -100,10 +100,10 @@ Name: "core";                          Description: "{cm:CoreData}";         Typ
 
 Name: "addons";                        Description: "{cm:SubAddons}";                                             Flags: disablenouninstallwarning
 
-Name: "addons\apache";                 Description: "Дополнения для Apache";
+Name: "addons\apache";                 Description: "{cm:ApacheAddons}";
 Name: "addons\apache\perl";            Description: "Perl 5.32";             Types: full;                         Flags: disablenouninstallwarning
 
-Name: "addons\php";                    Description: "Дополнения для PHP";
+Name: "addons\php";                    Description: "{cm:PHPAddons}";
 Name: "addons\php\blackfire";          Description: "Blackfire 2.29";        Types: full;                         Flags: disablenouninstallwarning
 Name: "addons\php\db2odbc";            Description: "DB2 ODBC 11.5";         Types: full;                         Flags: disablenouninstallwarning
 Name: "addons\php\ffmpeg";             Description: "FFMpeg 7.1";            Types: full;                         Flags: disablenouninstallwarning
@@ -114,16 +114,16 @@ Name: "addons\php\im17";               Description: "ImageMagick 7.1 VS17 (PHP 8
 Name: "addons\php\libwebp";            Description: "Libwebp 1.6";                        Types: full compact;    Flags: disablenouninstallwarning
 Name: "addons\php\oic";                Description: "Oracle Instant Client 23";           Types: full;            Flags: disablenouninstallwarning
 
-Name: "addons\erlang";                 Description: "Дополнения для RabbitMQ";
+Name: "addons\erlang";                 Description: "{cm:RabbitMQAddons}";
 Name: "addons\erlang\erlang26";        Description: "Erlang/OTP 26.2 (RabbitMQ-3.x)";     Types: full;            Flags: disablenouninstallwarning
 Name: "addons\erlang\erlang27";        Description: "Erlang/OTP 27.3 (RabbitMQ-4.x)";     Types: full;            Flags: disablenouninstallwarning
 
-Name: "addons\mongo";                  Description: "Дополнения для MongoDB";
-Name: "addons\mongo\mongotools";       Description: "MongoDB Tools 100.13";  Types: full;                         Flags: disablenouninstallwarning
-Name: "addons\mongo\mongoshell";       Description: "MongoDB Shell 2.5";     Types: full;                         Flags: disablenouninstallwarning
+Name: "addons\mongo";                  Description: "{cm:MongoDBAddons}";
+Name: "addons\mongo\mongotools";       Description: "MongoDB Tools 100.13";  Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
+Name: "addons\mongo\mongoshell";       Description: "MongoDB Shell 2.5";     Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
 
-Name: "addons\nvms";                   Description: "Менеджер версий Node.js";
-Name: "addons\nvms\nvm";               Description: "NVM 1.1";               Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer       
+Name: "addons\nvms";                   Description: "{cm:NodeJSVersionManager}";
+Name: "addons\nvms\nvm";               Description: "NVM 1.1";               Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
 
 
 Name: "modules";                       Description: "{cm:SubModules}";                                            Flags: disablenouninstallwarning
@@ -162,12 +162,12 @@ Name: "modules\mysql\mysql80";         Description: "MySQL 8.0";             Typ
 Name: "modules\mysql\mysql84";         Description: "MySQL 8.4";             Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
 
 Name: "modules\php";                   Description: "PHP";                                                        Flags: disablenouninstallwarning
-Name: "modules\php\php72";             Description: "PHP 7.2 VC15 NTS";      Types: full;                         Flags: disablenouninstallwarning
-Name: "modules\php\php73";             Description: "PHP 7.3 VC15 NTS";      Types: full;                         Flags: disablenouninstallwarning
-Name: "modules\php\php74";             Description: "PHP 7.4 VC15 NTS";      Types: full;                         Flags: disablenouninstallwarning
-Name: "modules\php\php80";             Description: "PHP 8.0 VS16 NTS";      Types: full;                         Flags: disablenouninstallwarning
-Name: "modules\php\php81";             Description: "PHP 8.1 VS16 NTS";      Types: full;                         Flags: disablenouninstallwarning
-Name: "modules\php\php82";             Description: "PHP 8.2 VS16 NTS";      Types: full compact;                 Flags: disablenouninstallwarning
+Name: "modules\php\php72";             Description: "PHP 7.2 VC15 NTS";      Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
+Name: "modules\php\php73";             Description: "PHP 7.3 VC15 NTS";      Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
+Name: "modules\php\php74";             Description: "PHP 7.4 VC15 NTS";      Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
+Name: "modules\php\php80";             Description: "PHP 8.0 VS16 NTS";      Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
+Name: "modules\php\php81";             Description: "PHP 8.1 VS16 NTS";      Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
+Name: "modules\php\php82";             Description: "PHP 8.2 VS16 NTS";      Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
 Name: "modules\php\php83";             Description: "PHP 8.3 VS16 NTS";      Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
 Name: "modules\php\php84";             Description: "PHP 8.4 VS17 NTS";      Types: full compact;                 Flags: disablenouninstallwarning; check: IsWindows10OrNewer
 
