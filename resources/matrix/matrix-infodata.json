@@ -701,7 +701,7 @@
                 "license_type": "Apache License 2.0",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version_additional": "2.4.65"
+                "version": "2.4.65"
             }
         },
         "Bind":
