@@ -1,39 +1,6 @@
 {
     "addons":
     {
-        "Blackfire":
-        {
-            "DownloadUrl": "https://blackfire.io/api/v1/releases/cli/windows/amd64",
-            "addon_env.bat":
-            {
-                "comment": "::",
-                "destination": "{root_dir}\\data\\cli\\env_{addon_name}.bat",
-                "directory_separator": "\\",
-                "enabled": "on",
-                "encoding": "UTF8",
-                "source_dir": "{root_dir}\\system\\templates"
-            },
-            "docs":
-            {
-                "English": "https://docs.blackfire.io/introduction"
-            },
-            "environment":
-            {
-                "PATH": "{root_dir}\\addons\\{addon_name};%PATH%"
-            },
-            "help": "--help --no-ansi",
-            "main":
-            {
-                "architecture": "x64",
-                "category": "Blackfire",
-                "enabled": "on",
-                "license": "",
-                "license_type": "",
-                "min_windows_ver": "6.1.7601",
-                "timestamp": "1651770000",
-                "version": "2.29.0"
-            }
-        },
         "DB2-ODBC":
         {
             "DownloadUrl": "https://public.dhe.ibm.com/ibmdl/export/pub/software/data/db2/drivers/odbc_cli/ntx64_odbc_cli.zip",
@@ -724,6 +691,25 @@
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
                 "version": "9.17.15"
+            }
+        },
+        "Blackfire":
+        {
+            "docs":
+            {
+                "English": "https://docs.blackfire.io/introduction"
+            },
+            "DownloadUrl": "https://blackfire.io/api/v1/releases/cli/windows/amd64",
+            "help": "--help --no-ansi",
+            "main":
+            {
+                "architecture": "x64",
+                "category": "Blackfire",
+                "license": "",
+                "license_type": "",
+                "min_windows_ver": "6.1.7601",
+                "timestamp": "1651770000",
+                "version": "2.29.0"
             }
         },
         "Mailpit":
