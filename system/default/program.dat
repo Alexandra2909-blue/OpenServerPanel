@@ -20,7 +20,7 @@
                   "key":"api_ip",
                   "value":{
                      "_type":"UString",
-                     "_value":"127.127.127.127",
+                     "_value":"127.0.1.0",
                      "_strict":true
                   }
                },
