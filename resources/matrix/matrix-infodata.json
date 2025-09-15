@@ -732,7 +732,7 @@
             {
                 "English": "https://mailpit.axllent.org/docs/"
             },
-            "DownloadUrl": "https://github.com/axllent/mailpit/releases/download/v1.27.7/mailpit-windows-amd64.zip",
+            "DownloadUrl": "https://github.com/axllent/mailpit/releases/download/v1.27.8/mailpit-windows-amd64.zip",
             "help": "-h",
             "main":
             {
@@ -745,7 +745,7 @@
                 "license_type": "MIT license",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "1.27.7"
+                "version": "1.27.8"
             }
         },
         "MariaDB-10.11":
