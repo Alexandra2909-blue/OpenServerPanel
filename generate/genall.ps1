@@ -462,7 +462,7 @@ function Generate-HelpFiles {
     Write-Stage "HELP" "Generating help files"
     $HelpDir = "$DestDir\ospanel_data\help"
     if (-not (Test-Path $HelpDir)) { New-Item -ItemType Directory -Force -Path $HelpDir | Out-Null }
-    if ($AddonName -like "ErlangOTP*" -or $AddonName -eq "Perl" -or $AddonName -eq "NVM") {
+    if ($AddonName -like "ErlangOTP*" -or $AddonName -eq "NVM") {
         Write-Skip "Help generation skipped for $AddonName"
         return
     }
@@ -786,8 +786,7 @@ function Copy-AdditionalFiles {
         "https://curl.se/ca/cacert.pem" = @(
             "..\system\ssl\cacert.pem",
             "..\system\bin\curl-ca-bundle.crt",
-            "..\bin\curl-ca-bundle.crt",
-            "..\addons\Perl\perl\vendor\lib\Mozilla\CA\cacert.pem"
+            "..\bin\curl-ca-bundle.crt"
         )
     }
     foreach ($url in $downloads.Keys) {
