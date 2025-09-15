@@ -1601,7 +1601,7 @@
             {
                 "English": "https://github.com/rnwood/smtp4dev/wiki"
             },
-            "DownloadUrl": "https://github.com/rnwood/smtp4dev/releases/download/3.9.0/Rnwood.Smtp4dev-win-x64-3.9.0.zip",
+            "DownloadUrl": "https://github.com/rnwood/smtp4dev/releases/download/3.10.1/Rnwood.Smtp4dev-win-x64-3.10.1.zip",
             "main":
             {
                 "architecture": "x64",
@@ -1613,7 +1613,7 @@
                 "license_type": "BSD-3-Clause license",
                 "min_windows_ver": "6.1.7601",
                 "timestamp": "1651770000",
-                "version": "3.9.0"
+                "version": "3.10.1"
             }
         },
         "Unbound":
