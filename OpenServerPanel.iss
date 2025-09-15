@@ -191,7 +191,7 @@ Name: "modules\web\nginx";             Description: "Nginx 1.29";            Typ
 
 [Files]
 
-Source: "resources\dist\CheckSSE42.dll";                          Flags: dontcopy
+Source: "resources\dist\CheckSSE42.dll";                          DestDir: "{tmp}";                               Flags: dontcopy
 Source: "system\default\menu.dat";     DestName: "menu.dat";      DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
 Source: "system\default\program.dat";  DestName: "program.dat";   DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
 Source: "licenses\*";                                             DestDir: "{app}\licenses";                      Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: core;                                    Permissions: users-full
