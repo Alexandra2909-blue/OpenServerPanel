@@ -104,7 +104,6 @@ Name: "addons\apache";                 Description: "{cm:ApacheAddons}";
 Name: "addons\apache\perl";            Description: "Perl 5.32";             Types: full;                         Flags: disablenouninstallwarning
 
 Name: "addons\php";                    Description: "{cm:PHPAddons}";
-Name: "addons\php\blackfire";          Description: "Blackfire 2.29";        Types: full;                         Flags: disablenouninstallwarning
 Name: "addons\php\db2odbc";            Description: "DB2 ODBC 11.5";         Types: full;                         Flags: disablenouninstallwarning
 Name: "addons\php\ffmpeg";             Description: "FFMpeg 7.1";            Types: full;                         Flags: disablenouninstallwarning
 Name: "addons\php\gs";                 Description: "Ghostscript 10.05";     Types: full compact;                 Flags: disablenouninstallwarning
@@ -127,6 +126,8 @@ Name: "addons\nvms\nvm";               Description: "NVM 1.1";               Typ
 
 
 Name: "modules";                       Description: "{cm:SubModules}";                                            Flags: disablenouninstallwarning
+
+Name: "modules\blackfire";             Description: "Blackfire 2.29";        Types: full;                         Flags: disablenouninstallwarning
 
 Name: "modules\dns";                   Description: "DNS";                                                        Flags: disablenouninstallwarning
 Name: "modules\dns\bind";              Description: "Bind 9.17";             Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
@@ -193,15 +194,15 @@ Name: "modules\web\nginx";             Description: "Nginx 1.29";            Typ
 
 [Files]
 
-Source: "system\default\menu.dat";      DestName: "menu.dat";     DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
-Source: "system\default\program.dat";   DestName: "program.dat";  DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
+Source: "resources\dist\checksse42.exe";                          Flags: dontcopy
+Source: "system\default\menu.dat";     DestName: "menu.dat";      DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
+Source: "system\default\program.dat";  DestName: "program.dat";   DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
 Source: "licenses\*";                                             DestDir: "{app}\licenses";                      Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: core;                                    Permissions: users-full
 Source: "bin\*";                                                  DestDir: "{app}\bin";                           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: core;                                    Permissions: users-full
 Source: "home\*";                                                 DestDir: "{app}\home";                          Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs uninsneveruninstall confirmoverwrite; Components: core;                 Permissions: users-full
 Source: "system\*";                                               DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: core;                                    Permissions: users-full
 Source: "user\*";                                                 DestDir: "{app}\user";                          Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: core;                                    Permissions: users-full
-Source: "addons\Blackfire\*";                                     DestDir: "{app}\addons\Blackfire";              Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite solidbreak;  Components: addons\php\blackfire;         Permissions: users-full
-Source: "addons\DB2-ODBC\*";                                      DestDir: "{app}\addons\DB2-ODBC";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\db2odbc;                      Permissions: users-full
+Source: "addons\DB2-ODBC\*";                                      DestDir: "{app}\addons\DB2-ODBC";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite solidbreak;  Components: addons\php\db2odbc;           Permissions: users-full
 Source: "addons\FFMpeg\*";                                        DestDir: "{app}\addons\FFMpeg";                 Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\ffmpeg;                       Permissions: users-full
 Source: "addons\Ghostscript\*";                                   DestDir: "{app}\addons\Ghostscript";            Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\gs;                           Permissions: users-full
 Source: "addons\ImageMagick-vc15\*";                              DestDir: "{app}\addons\ImageMagick-vc15";       Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\php\im15;                         Permissions: users-full
@@ -254,6 +255,7 @@ Source: "modules\MongoDB-7.0\*";                                  DestDir: "{app
 Source: "modules\MongoDB-8.0\*";                                  DestDir: "{app}\modules\MongoDB-8.0";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\mongodb\mongodb80;               Permissions: users-full
 
 Source: "modules\Bind\*";                                         DestDir: "{app}\modules\Bind";                  Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite solidbreak;  Components: modules\dns\bind;             Permissions: users-full
+Source: "modules\Blackfire\*";                                    DestDir: "{app}\modules\Blackfire";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\blackfire;                       Permissions: users-full
 Source: "modules\Mailpit\*";                                      DestDir: "{app}\modules\Mailpit";               Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\mail\mailpit;                    Permissions: users-full
 Source: "modules\Memcached\*";                                    DestDir: "{app}\modules\Memcached";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\memcached;                       Permissions: users-full
 Source: "modules\Apache\*";                                       DestDir: "{app}\modules\Apache";                Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: modules\web\apache;                      Permissions: users-full
@@ -373,7 +375,7 @@ Type: dirifempty;     Name: "{app}"
 var
   ModePage: TInputOptionWizardPage;
   APPInstallMode: Boolean;
-
+  
 function GetDriveType(lpRootPathName: string): UInt;
   external 'GetDriveTypeW@kernel32.dll stdcall';
 
@@ -398,6 +400,15 @@ begin
       WizardForm.ComponentsList.Checked[i] := False;
     end;
   end;
+end;
+
+function IsSSE42Supported(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := Exec(ExpandConstant('{tmp}\checksse42.exe'), '', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if Result then
+    Result := (ResultCode = 0);
 end;
 
 function IsPathValid(Path: string): Boolean;
@@ -661,6 +672,16 @@ begin
           DelTree(ExpandConstant('{app}\home'), True, True, True);
     end;
     AddTo_Path();
+  end;
+end;
+
+function InitializeSetup(): Boolean;
+begin
+  if not IsSSE42Supported() then begin
+    MsgBox('Your processor does not support SSE4.2 instructions. Installation is not possible.', mbError, MB_OK);
+    Result := False;
+  end else begin
+    Result := True;
   end;
 end;
 
