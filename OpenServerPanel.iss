@@ -100,9 +100,6 @@ Name: "core";                          Description: "{cm:CoreData}";         Typ
 
 Name: "addons";                        Description: "{cm:SubAddons}";                                             Flags: disablenouninstallwarning
 
-Name: "addons\apache";                 Description: "{cm:ApacheAddons}";
-Name: "addons\apache\perl";            Description: "Perl 5.32";             Types: full;                         Flags: disablenouninstallwarning
-
 Name: "addons\php";                    Description: "{cm:PHPAddons}";
 Name: "addons\php\db2odbc";            Description: "DB2 ODBC 11.5";         Types: full;                         Flags: disablenouninstallwarning
 Name: "addons\php\ffmpeg";             Description: "FFMpeg 7.1";            Types: full;                         Flags: disablenouninstallwarning
@@ -194,7 +191,7 @@ Name: "modules\web\nginx";             Description: "Nginx 1.29";            Typ
 
 [Files]
 
-Source: "resources\dist\checksse42.exe";                          Flags: dontcopy
+Source: "resources\dist\CheckSSE42.dll";                          Flags: dontcopy
 Source: "system\default\menu.dat";     DestName: "menu.dat";      DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
 Source: "system\default\program.dat";  DestName: "program.dat";   DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
 Source: "licenses\*";                                             DestDir: "{app}\licenses";                      Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: core;                                    Permissions: users-full
@@ -213,7 +210,6 @@ Source: "addons\Libwebp\*";                                       DestDir: "{app
 Source: "addons\MongoShell\*";                                    DestDir: "{app}\addons\MongoShell";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\mongo\mongoshell;                 Permissions: users-full
 Source: "addons\MongoTools\*";                                    DestDir: "{app}\addons\MongoTools";             Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\mongo\mongotools;                 Permissions: users-full
 Source: "addons\NVM\*";                                           DestDir: "{app}\addons\NVM";                    Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\nvms\nvm;                         Permissions: users-full
-Source: "addons\Perl\*";                                          DestDir: "{app}\addons\Perl";                   Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\apache\perl;                      Permissions: users-full
 Source: "addons\ErlangOTP-26\*";                                  DestDir: "{app}\addons\ErlangOTP-26";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\erlang\erlang26;                  Permissions: users-full
 Source: "addons\ErlangOTP-27\*";                                  DestDir: "{app}\addons\ErlangOTP-27";           Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: addons\erlang\erlang27;                  Permissions: users-full
 
@@ -375,6 +371,9 @@ Type: dirifempty;     Name: "{app}"
 var
   ModePage: TInputOptionWizardPage;
   APPInstallMode: Boolean;
+  
+function IsSSE42Available: Boolean;
+  external 'IsSSE42Available@{tmp}\CheckSSE42.dll stdcall';
 
 function GetDriveType(lpRootPathName: string): UInt;
   external 'GetDriveTypeW@kernel32.dll stdcall';
@@ -400,15 +399,6 @@ begin
       WizardForm.ComponentsList.Checked[i] := False;
     end;
   end;
-end;
-
-function IsSSE42Supported(): Boolean;
-var
-  ResultCode: Integer;
-begin
-  Result := Exec(ExpandConstant('{tmp}\checksse42.exe'), '', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  if Result then
-    Result := (ResultCode = 0);
 end;
 
 function IsPathValid(Path: string): Boolean;
@@ -677,12 +667,12 @@ end;
 
 function InitializeSetup(): Boolean;
 begin
-  if not IsSSE42Supported() then begin
-    MsgBox('Your processor does not support SSE4.2 instructions. Installation is not possible.', mbError, MB_OK);
+    ExtractTemporaryFile('CheckSSE42.dll');
+  if not IsSSE42Available() then begin
+    MsgBox(ExpandConstant('{cm:sseError}'), mbError, MB_OK);
     Result := False;
-  end else begin
+  end else
     Result := True;
-  end;
 end;
 
 function IsWindowsVersionOrNewer(Major, Minor: Integer): Boolean;
