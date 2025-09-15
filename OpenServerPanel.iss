@@ -375,7 +375,7 @@ Type: dirifempty;     Name: "{app}"
 var
   ModePage: TInputOptionWizardPage;
   APPInstallMode: Boolean;
-  
+
 function GetDriveType(lpRootPathName: string): UInt;
   external 'GetDriveTypeW@kernel32.dll stdcall';
 
