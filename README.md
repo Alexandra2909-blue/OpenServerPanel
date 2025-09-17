@@ -37,7 +37,7 @@
 
 ### Distinctive сharacteristics
 
-![](https://img.shields.io/badge/SSL-ON-blue) ![](https://img.shields.io/badge/HTTP/2-ON-blue) ![](https://img.shields.io/badge/Brotli-ON-blue) ![](https://img.shields.io/badge/IDN_&_IPv6_support-ON-blue) ![](https://img.shields.io/badge/Nginx_+_PHP-FastCGI_&_Proxy-blue) ![](https://img.shields.io/badge/Composer_&_Node_&_NPM-Yes!-blue)
+![](https://img.shields.io/badge/SSL-ON-blue) ![](https://img.shields.io/badge/HTTP/2-ON-blue) ![](https://img.shields.io/badge/Brotli-ON-blue) ![](https://img.shields.io/badge/IDN_&_IPv6_support-ON-blue) ![](https://img.shields.io/badge/Composer_&_Node_&_NPM-Yes!-blue)
 
 **RUN MULTIPLE PHP VERSIONS AT THE SAME TIME!**
 
@@ -64,74 +64,3 @@
 ## Command Line Interface
 
 ![Open Server Panel Console](./resources/screenshots/cli-en.png)
-
-***
-
-# Open Server Panel 6
-
-## Забудьте о муках веб-разработки! 💻🚀
-
-**Мечтаете создать свой сайт или веб-сервис, но пугает сложность настройки серверного ПО?** 😰
-
-**Open Server Panel — ваш ключ к миру веб-разработки без лишних хлопот!** 🎉
-
-**Представьте:**
-
-* **Удобная панель управления** – всё под рукой, никаких сложных настроек. 🖱️
-* **Мощный WAMP-стек** – всё необходимое для разработки и тестирования. 🧰
-* **Быстрый старт** – установите программу и сразу приступайте к работе! ⚡
-* **Гибкость и контроль** – настраивайте сервер под свои нужды. ⚙️
-* **Поддержка IPv6 и SSL** – безопасность вашего проекта на высшем уровне. 🔐
-* **Огромное сообщество** –  получайте помощь и делитесь опытом. 🤝
-
-**Open Server Panel идеально подходит как для новичков, так и для опытных разработчиков.** 🎓👨‍💻
-
-**Скачайте Open Server Panel прямо сейчас и откройте для себя мир веб-разработки без границ!** 🌎
-
-**P.S.** Хотите получать обновления чаще? Поддержите проект, выбрав платную загрузку. 😊
-
-## Возможности
-
-### Модули
-
-![](https://img.shields.io/badge/Apache-2.4-7aba03?logo=apache&logoColor=white) ![](https://img.shields.io/badge/Apache_modules-+14-ef509f) ![](https://img.shields.io/badge/Bind-9.16-red) ![](https://img.shields.io/badge/Mailpit-1.25-7aba03) ![](https://img.shields.io/badge/MariaDB-10.1--11.7-blue?logo=mariadb&logoColor=white) ![](https://img.shields.io/badge/Memcached-1.4--1.6-blue) ![](https://img.shields.io/badge/MongoDB-3.4--8.0-blue?logo=mongodb&logoColor=white) ![](https://img.shields.io/badge/MySQL-5.6--8.4-blue?logo=mysql&logoColor=white) ![](https://img.shields.io/badge/Nginx-1.28-7aba03?logo=nginx&logoColor=white) ![](https://img.shields.io/badge/Nginx_modules-+9-ef509f) ![](https://img.shields.io/badge/PHP-7.2--8.4-blue?logo=php&logoColor=white) ![](https://img.shields.io/badge/PHP_extensions-+115-ef509f) ![](https://img.shields.io/badge/PostgreSQL-9.5--17-blue?logo=postgresql&logoColor=white) ![](https://img.shields.io/badge/RabbitMQ-3.13--4.0-blue?logo=rabbitmq&logoColor=white) ![](https://img.shields.io/badge/Redis-3.0--7.4-blue?logo=redis&logoColor=white) ![](https://img.shields.io/badge/Smtp4dev-3.8-7aba03) ![](https://img.shields.io/badge/Unbound-1.23-7aba03)
-
-### Дополнения
-
-![](https://img.shields.io/badge/Blackfire-2.28-7aba03) ![](https://img.shields.io/badge/ErlangOTP-26.2-7aba03?logo=Erlang&logoColor=white) ![](https://img.shields.io/badge/FFMpeg-7.1-7aba03?logo=ffmpeg&logoColor=white) ![](https://img.shields.io/badge/Ghostscript-10.05-7aba03) ![](https://img.shields.io/badge/ImageMagick-7.1-7aba03) ![](https://img.shields.io/badge/InstantClient-11.2--23.8-blue) ![](https://img.shields.io/badge/Libwebp-1.5-7aba03) ![](https://img.shields.io/badge/MongoDBTools-100.12-7aba03?logo=mongodb&logoColor=white) ![](https://img.shields.io/badge/NVM-1.1.12-7aba03?logo=node.js&logoColor=white) ![](https://img.shields.io/badge/Perl-5.32-7aba03?logo=perl&logoColor=white)
-
-### Вспомогательные утилиты
-
-![](https://img.shields.io/badge/aria2c-1.37.0-7aba03) ![](https://img.shields.io/badge/bat-0.24.0-7aba03) ![](https://img.shields.io/badge/brotli-1.1.0-7aba03) ![](https://img.shields.io/badge/curl-8.12.1-7aba03) ![](https://img.shields.io/badge/dust-1.2.0-7aba03) ![](https://img.shields.io/badge/fd-10.2.0-7aba03) ![](https://img.shields.io/badge/gzip-1.13.0-7aba03) ![](https://img.shields.io/badge/jq-1.6-7aba03) ![](https://img.shields.io/badge/mmdbinspect-0.2.0-7aba03) ![](https://img.shields.io/badge/sass-1.86.1-7aba03) ![](https://img.shields.io/badge/sd-1.0.0-7aba03) ![](https://img.shields.io/badge/wget-1.21.4-7aba03) ![](https://img.shields.io/badge/xh-0.24.1-7aba03)
-
-### Особенности
-
-![](https://img.shields.io/badge/SSL-%D0%92%D0%9A%D0%9B-blue) ![](https://img.shields.io/badge/HTTP/2-%D0%92%D0%9A%D0%9B-blue) ![](https://img.shields.io/badge/Brotli-%D0%92%D0%9A%D0%9B-blue) ![](https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%BA%D0%B0_IDN_&amp;_IPv6-%D0%92%D0%9A%D0%9B-blue) ![](https://img.shields.io/badge/Nginx_+_PHP-FastCGI_&amp;_%D0%9F%D1%80%D0%BE%D0%BA%D1%81%D0%B8-blue) ![](https://img.shields.io/badge/Composer_&amp;_Node_&amp;_NPM-%D0%94%D0%B0!-blue)
-
-**ВОЗМОЖЕН ОДНОВРЕМЕННЫЙ ЗАПУСК НЕСКОЛЬКИХ ВЕРСИЙ PHP!**
-
-**PHPINFO:** [PHP 7.2](https://ospanel.io/phpinfo/php-7.2.html) | [PHP 7.3](https://ospanel.io/phpinfo/php-7.3.html) | [PHP 7.4](https://ospanel.io/phpinfo/php-7.4.html) | [PHP 8.0](https://ospanel.io/phpinfo/php-8.0.html) | [PHP 8.1](https://ospanel.io/phpinfo/php-8.1.html) | [PHP 8.2](https://ospanel.io/phpinfo/php-8.2.html) | [PHP 8.3](https://ospanel.io/phpinfo/php-8.3.html) | [PHP 8.4](https://ospanel.io/phpinfo/php-8.4.html)
-
-**Документация:** [https://github.com/OSPanel/OpenServerPanel/wiki/Документация](https://github.com/OSPanel/OpenServerPanel/wiki/%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F)
-
-**Загрузка:** https://ospanel.io/download/
-
-## Системные требования
-
-| Компонент | Требования |
-|---|---|
-| Операционная система | Windows 10 / Windows Server 2016 или новее |
-| Свободные аппаратные ресурсы | Минимум 4 ГБ RAM и 15 ГБ SSD |
-| Обязательное ПО | MSVC++ Redistributable Packages (включено в комплект поставки) |
-| Файловая система | NTFS (сетевые диски не поддерживаются) |
-
-> [!CAUTION]
-> **Не поддерживаются** Linux, macOS, Windows XP, Windows 7, Windows 8, 32-битные системы, процессоры без SSE4.2.
-
-## Графический интерфейс
-
-![Open Server Panel GUI](./resources/screenshots/gui.png)
-
-## Интерфейс командной строки
-
-![Open Server Panel Console](./resources/screenshots/cli.png)
