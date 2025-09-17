@@ -7,7 +7,6 @@
 # ================================================================================
 
 $env:LC_ALL = "en_US.UTF-8"; $env:LANG = "en_US.UTF-8"
-$env:TEMP = "A:"
 
 # ================== SCRIPT CONFIGURATION ==================
 $JsonPath       = "..\resources\matrix\matrix-infodata.json"
@@ -801,7 +800,6 @@ function Copy-AdditionalFiles {
         }
     }
     $localCopies = @{
-        "..\..\OSPSource\Win64\Release\OpenServerPanel.exe" = "..\bin\ospanel.exe"
         "..\resources\dist\README.txt" = "..\user\geo\README.txt"
         "..\bin\bat.exe" = "..\system\bin\bat.exe"
         "..\bin\curl.exe" = "..\system\bin\curl.exe"
@@ -1222,7 +1220,7 @@ function Process-PHPModule { param([string]$ModuleName, [string]$ZipPath, [strin
         Write-Stage "PHP-PROCESSING" "Removing unnecessary directories and files"
         [void](Remove-DirectoriesIfExists -Base $DestDir -Dirs @("bin","dev","3rd-party\imagick\config","config"))
         [void](Remove-FilesByPatterns -Base $DestDir -Patterns @("*.pdb","*.lib") -Recurse)
-        $removedDlls = Remove-FilesByPatterns -Base $DestDir -Patterns @("fbclient.dll","IM_MOD_*.dll","CORE_RL_*.dll","FILTER_analyze*.dll") -Recurse
+        $removedDlls = Remove-FilesByPatterns -Base $DestDir -Patterns @("IM_MOD_*.dll","CORE_RL_*.dll","FILTER_analyze*.dll") -Recurse
         if ($removedDlls -gt 0) { Write-Success "Removed $removedDlls unnecessary DLL files" }
 
         Write-Stage "PHP-PROCESSING" "Creating browscap.ini"
