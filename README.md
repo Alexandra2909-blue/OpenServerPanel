@@ -47,33 +47,15 @@
 
 **Download:** https://ospanel.io/download/
 
-## System Requirements
-
 | Component | Requirements |
 |---|---|
-| Operating System | Windows 10 (version 1607 or later), Windows Server 2016 or later.<br>32-bit systems are not supported.<br>Versions for Linux and MacOS are not available. |
-| Hardware Resources | Minimum 4 GB of RAM and 15 GB of free disk space. |
-| Required Software | MSVC++ 2005-2022 Redistributable Packages (x86/x64, included in the distribution). |
-| File System | NTFS (compressed volumes and network drives are not supported). |
+| Operating System | Windows 10, Windows Server 2016 or later |
+| Hardware Resources | At least 4 GB of RAM and 15 GB of SSD. |
+| Required Software | MSVC++ Redistributable Packages (included) |
+| File System | NTFS (network drives are not supported) |
 
-### Support for Legacy Operating Systems
-
-Open Server Panel can be run on older versions of Windows (x64), however with some limitations:
-
-* Not all modules are available.
-* File paths cannot exceed 255 characters.
-
-| Operating System | Version Number | Support Level |
-|---|---|---|
-| Windows 7 SP1 | 6.1.7601 | Limited |
-| Windows Server 2008 R2 SP1 | 6.1.7601 | Limited |
-| Windows Home Server 2011 | 6.1.8400 | Limited |
-| Windows Server 2012 | 6.2.9200 | Limited |
-| Windows 8 | 6.2.9200 | Limited |
-| Windows 8.1 | 6.3.9600 | Limited |
-| Windows Server 2012 R2 | 6.3.9600 | Limited |
-| Windows 10 v1507 | 10.0.10240 | Limited |
-| Windows 10 v1511 | 10.0.10586 | Limited |
+> [!CAUTION]
+> **Not supported** Linux, macOS, Windows XP, Windows 7, Windows 8, 32‑bit systems, or processors without SSE4.2.
 
 ## GUI
 
@@ -138,29 +120,13 @@ Open Server Panel can be run on older versions of Windows (x64), however with so
 
 | Компонент | Требования |
 |---|---|
-| Операционная система | Windows 10 (версия 1607 или новее), Windows Server 2016 или новее.<br>32-битные системы не поддерживаются.<br>Версии для Linux и MacOS отсутствуют. |
-| Аппаратные ресурсы | Минимум 4 ГБ оперативной памяти (RAM) и 15 ГБ свободного места на диске. |
-| Обязательное ПО | MSVC++ 2005-2022 Redistributable Packages (x86/x64, включены в комплект поставки). |
-| Файловая система | NTFS (сжатые тома и сетевые диски не поддерживаются). |
+| Операционная система | Windows 10 / Windows Server 2016 или новее |
+| Свободные аппаратные ресурсы | Минимум 4 ГБ RAM и 15 ГБ SSD |
+| Обязательное ПО | MSVC++ Redistributable Packages (включено в комплект поставки) |
+| Файловая система | NTFS (сетевые диски не поддерживаются) |
 
-### Поддержка устаревших операционных систем
-
-Open Server Panel может запускаться на устаревших версиях Windows (x64), однако с некоторыми ограничениями:
-
-* Не все модули доступны.
-* Пути к файлам не могут превышать 255 символов.
-
-| Операционная система | Номер версии | Уровень поддержки |
-|---|---|---|
-| Windows 7 SP1 | 6.1.7601 | Ограниченная |
-| Windows Server 2008 R2 SP1 | 6.1.7601 | Ограниченная |
-| Windows Home Server 2011 | 6.1.8400 | Ограниченная |
-| Windows Server 2012 | 6.2.9200 | Ограниченная |
-| Windows 8 | 6.2.9200 | Ограниченная |
-| Windows 8.1 | 6.3.9600 | Ограниченная |
-| Windows Server 2012 R2 | 6.3.9600 | Ограниченная |
-| Windows 10 v1507 | 10.0.10240 | Ограниченная |
-| Windows 10 v1511 | 10.0.10586 | Ограниченная |
+> [!CAUTION]
+> **Не поддерживаются** Linux, macOS, Windows XP, Windows 7, Windows 8, 32-битные системы, процессоры без SSE4.2.
 
 ## Графический интерфейс
 
