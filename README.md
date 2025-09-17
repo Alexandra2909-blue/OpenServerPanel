@@ -29,7 +29,7 @@
 
 ### Addons
 
-![](https://img.shields.io/badge/Blackfire-2.28-7aba03) ![](https://img.shields.io/badge/ErlangOTP-26.2-7aba03?logo=Erlang&logoColor=white) ![](https://img.shields.io/badge/FFMpeg-7.1-7aba03?logo=ffmpeg&logoColor=white) ![](https://img.shields.io/badge/Ghostscript-10.05-7aba03) ![](https://img.shields.io/badge/ImageMagick-7.1-7aba03) ![](https://img.shields.io/badge/InstantClient-11.2--23.8-blue) ![](https://img.shields.io/badge/Libwebp-1.5-7aba03) ![](https://img.shields.io/badge/MongoDBTools-100.12-7aba03?logo=mongodb&logoColor=white) ![](https://img.shields.io/badge/NVM-1.1.12-7aba03?logo=node.js&logoColor=white) ![](https://img.shields.io/badge/Perl-5.32-7aba03?logo=perl&logoColor=white)
+![](https://img.shields.io/badge/DB2-ODBC-11.5.9000-7aba03) ![](https://img.shields.io/badge/ErlangOTP-26.2.5.14-7aba03?logo=Erlang&logoColor=white) ![](https://img.shields.io/badge/ErlangOTP-27.3.4.2-7aba03?logo=Erlang&logoColor=white) ![](https://img.shields.io/badge/FFMpeg-7.1.1-7aba03?logo=ffmpeg&logoColor=white) ![](https://img.shields.io/badge/Ghostscript-10.05.1-7aba03) ![](https://img.shields.io/badge/ImageMagick-7.1.1-7aba03) ![](https://img.shields.io/badge/InstantClient-23.8.0.25-blue) ![](https://img.shields.io/badge/Libwebp-1.6.0-7aba03) ![](https://img.shields.io/badge/MongoShell-2.5.7-7aba03?logo=mongodb&logoColor=white) ![](https://img.shields.io/badge/MongoTools-100.13-7aba03?logo=mongodb&logoColor=white) ![](https://img.shields.io/badge/NVM-1.1.12-7aba03?logo=node.js&logoColor=white)
 
 ### Auxiliary utilities
 
