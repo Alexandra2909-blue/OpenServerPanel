@@ -1,3 +1,5 @@
+[![en](https://img.shields.io/badge/lang-en-green.svg)](https://github.com/OSPanel/OpenServerPanel)
+
 # Open Server Panel 6
 
 ## Забудьте о муках веб-разработки! 💻🚀
