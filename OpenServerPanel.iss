@@ -191,7 +191,7 @@ Name: "modules\web\nginx";             Description: "Nginx 1.29";            Typ
 
 [Files]
 
-Source: "resources\dist\CheckSSE42.dll";                          DestDir: "{tmp}";                               Flags: dontcopy
+Source: "resources\dist\CheckSSE42.dll";                          Flags: dontcopy
 Source: "system\default\menu.dat";     DestName: "menu.dat";      DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
 Source: "system\default\program.dat";  DestName: "program.dat";   DestDir: "{app}\system";                        Flags: sortfilesbyextension sortfilesbyname ignoreversion confirmoverwrite;                                  Components: core;                                    Permissions: users-full
 Source: "licenses\*";                                             DestDir: "{app}\licenses";                      Flags: sortfilesbyextension sortfilesbyname ignoreversion recursesubdirs createallsubdirs confirmoverwrite;  Components: core;                                    Permissions: users-full
@@ -373,7 +373,7 @@ var
   APPInstallMode: Boolean;
   
 function IsSSE42Available: Boolean;
-  external 'IsSSE42Available@{tmp}\CheckSSE42.dll stdcall';
+  external 'IsSSE42Available@files:CheckSSE42.dll stdcall delayload';
 
 function GetDriveType(lpRootPathName: string): UInt;
   external 'GetDriveTypeW@kernel32.dll stdcall';
@@ -667,7 +667,6 @@ end;
 
 function InitializeSetup(): Boolean;
 begin
-    ExtractTemporaryFile('CheckSSE42.dll');
   if not IsSSE42Available() then begin
     MsgBox(ExpandConstant('{cm:sseError}'), mbError, MB_OK);
     Result := False;
