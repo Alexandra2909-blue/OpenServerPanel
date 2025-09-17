@@ -1,32 +1,12 @@
 ﻿[0]
 
-caption        = {lang_launch_app}
-category       = projects
-command        = wt.exe nt -d "{root_dir}" "%COMSPEC%" /k "osp reset init noprint & osp project {host_decoded} start"
-hr_after       = on
-icon           = rocket
-need_start_cmd = on
-need_use_wt    = on
-
-[1]
-
-caption        = {lang_launch_app}
-category       = projects
-command        = "%COMSPEC%" /k "osp reset init noprint & osp project {host_decoded} start"
-hr_after       = on
-icon           = rocket
-need_start_cmd = on
-need_use_wt    = off
-
-[2]
-
 caption        = {lang_open_in_browser}
 category       = projects
 command        = "%COMSPEC%" /c "start "" "{project_url}""
 hide           = on
 icon           = up-right-from-square
 
-[3]
+[1]
 
 caption        = {lang_open_in_console}
 category       = projects
@@ -34,7 +14,7 @@ command        = wt.exe nt -d "{root_dir}" "%COMSPEC%" /k "osp reset init noprin
 icon           = terminal
 need_use_wt    = on
 
-[4]
+[2]
 
 caption        = {lang_open_in_console}
 category       = projects
@@ -42,7 +22,7 @@ command        = "%COMSPEC%" /k "osp reset init noprint & osp project {host_deco
 icon           = terminal
 need_use_wt    = off
 
-[5]
+[3]
 
 caption        = {lang_open_in_explorer}
 category       = projects
@@ -50,7 +30,7 @@ command        = "%SystemRoot%\explorer.exe" "{project_dir}"
 icon           = folder-closed
 work_directory = {project_dir}
 
-[6]
+[4]
 
 category       = projects
 command        = "%COMSPEC%" /c "start "" "{project_url}""
@@ -58,12 +38,32 @@ hide           = on
 need_alias     = on
 icon           = up-right-from-square
 
+[5]
+
+caption        = {lang_launch_app}
+category       = projects
+command        = wt.exe nt -d "{root_dir}" "%COMSPEC%" /k "osp reset init noprint & osp project {host_decoded} start"
+hr_before      = on
+icon           = rocket
+need_start_cmd = on
+need_use_wt    = on
+
+[6]
+
+caption        = {lang_launch_app}
+category       = projects
+command        = "%COMSPEC%" /k "osp reset init noprint & osp project {host_decoded} start"
+hr_before      = on
+icon           = rocket
+need_start_cmd = on
+need_use_wt    = off
+
 [7]
 
 caption        = {lang_launch_shell}
 category       = modules
 command        = wt.exe nt -d "{root_dir}" "%COMSPEC%" /k "osp reset init noprint & osp shell {module_name}"
-icon           = rocket
+icon           = display
 need_state     = on
 need_shell     = on
 need_use_wt    = on
@@ -73,7 +73,7 @@ need_use_wt    = on
 caption        = {lang_launch_shell}
 category       = modules
 command        = "%COMSPEC%" /k "osp reset init noprint & osp shell {module_name}"
-icon           = rocket
+icon           = display
 need_state     = on
 need_shell     = on
 need_use_wt    = off
