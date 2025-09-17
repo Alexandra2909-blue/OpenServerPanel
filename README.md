@@ -1,3 +1,5 @@
+[![ru](https://img.shields.io/badge/lang-ru-green.svg)](https://github.com/OSPanel/OpenServerPanel/blob/main/README.ru.md)
+
 # Open Server Panel 6
 
 ## Forget the headaches of web development! 💻🚀
