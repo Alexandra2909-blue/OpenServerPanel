@@ -299,7 +299,7 @@
                 "license_type": "ImageMagick License",
                 "min_windows_ver": "6.1.7601",
                 "timestamp": "1651770000",
-                "version": "7.1.1-46-vc15"
+                "version": "7.1.1-46"
             }
         },
         "ImageMagick-vs16":
@@ -358,7 +358,7 @@
                 "license_type": "ImageMagick License",
                 "min_windows_ver": "6.1.7601",
                 "timestamp": "1651770000",
-                "version": "7.1.1-46-vs16"
+                "version": "7.1.1-46"
             }
         },
         "ImageMagick-vs17":
@@ -417,7 +417,7 @@
                 "license_type": "ImageMagick License",
                 "min_windows_ver": "6.1.7601",
                 "timestamp": "1651770000",
-                "version": "7.1.1-46-vs17"
+                "version": "7.1.1-46"
             }
         },
         "InstantClient":
@@ -621,7 +621,7 @@
             "main":
             {
                 "architecture": "x64",
-                "category": "Web Servers",
+                "category": "HTTP",
                 "fast_stop": "yes",
                 "ip_separator": "",
                 "ipv6_support": "yes",
@@ -1085,7 +1085,7 @@
             "main":
             {
                 "architecture": "x64",
-                "category": "Web Servers",
+                "category": "HTTP",
                 "ip_separator": "",
                 "ipv6_support": "yes",
                 "license": "https://nginx.org/LICENSE",
@@ -1117,7 +1117,7 @@
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "7.2.34 VC15 NTS"
+                "version": "7.2.34"
             }
         },
         "PHP-7.3":
@@ -1142,7 +1142,7 @@
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "7.3.33 VC15 NTS"
+                "version": "7.3.33"
             }
         },
         "PHP-7.4":
@@ -1167,7 +1167,7 @@
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "7.4.33 VC15 NTS"
+                "version": "7.4.33"
             }
         },
         "PHP-8.0":
@@ -1192,7 +1192,7 @@
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "8.0.30 VS16 NTS"
+                "version": "8.0.30"
             }
         },
         "PHP-8.1":
@@ -1217,7 +1217,7 @@
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "8.1.33 VS16 NTS"
+                "version": "8.1.33"
             }
         },
         "PHP-8.2":
@@ -1242,7 +1242,7 @@
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "8.2.29 VS16 NTS"
+                "version": "8.2.29"
             }
         },
         "PHP-8.3":
@@ -1267,7 +1267,7 @@
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "8.3.25 VS16 NTS"
+                "version": "8.3.25"
             }
         },
         "PHP-8.4":
@@ -1292,7 +1292,7 @@
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "8.4.12 VS17 NTS"
+                "version": "8.4.12"
             }
         },
         "PostgreSQL-11":
