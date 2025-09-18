@@ -193,7 +193,7 @@ function Get-CachedFile {
     Write-Stage "DOWNLOAD" "Downloading to cache" $Url
     $downloadSuccess = Invoke-Curl -Url $Url -OutFile $cachedFilePath -Silent -Follow -Fail
 
-    if ($downloadSuccess -and (Test-Path $cachedFilePath) -and (Get-Item $cachedFilePath).Length -gt 0) {
+    if (($downloadSuccess -eq 0) -and (Test-Path $cachedFilePath) -and (Get-Item $cachedFilePath).Length -gt 0) {
         $fileSize = [math]::Round((Get-Item $cachedFilePath).Length / 1MB, 2)
         Write-Success "File downloaded to cache ($fileSize MB)"
         Copy-Item $cachedFilePath $OutFile -Force
@@ -205,16 +205,72 @@ function Get-CachedFile {
 }
 
 function Invoke-Curl {
-    param([string]$Url, [string]$OutFile, [switch]$Silent, [switch]$Follow, [switch]$Fail)
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Url,
+
+        [Parameter(Mandatory = $true)]
+        [string] $OutFile,
+
+        [switch] $Silent,
+        [switch] $Follow,
+        [switch] $Fail = $true,
+
+        # Опционально: SOCKS5-прокси
+        [switch] $UseProxy,
+        [string] $ProxyUrl
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Url))     { throw "Invoke-Curl: Url is empty." }
+    if ([string]::IsNullOrWhiteSpace($OutFile)) { throw "Invoke-Curl: OutFile is empty." }
+
+    # Базовая директория для относительного пути ..\system\bin\curl.exe
+    $baseDir = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
+
+    # Сформировать абсолютный путь к ..\system\bin\curl.exe
+    # ..\ от baseDir
+    $curlPath = Join-Path -Path (Join-Path -Path $baseDir -ChildPath '..\system\bin') -ChildPath 'curl.exe'
+    $curlPath = [System.IO.Path]::GetFullPath($curlPath)
+
+    if (-not (Test-Path -LiteralPath $curlPath)) {
+        throw "Invoke-Curl: Forced curl not found at '$curlPath'."
+    }
+
+    # Гарантировать каталог назначения
+    $dir = [System.IO.Path]::GetDirectoryName($OutFile)
+    if (-not [string]::IsNullOrWhiteSpace($dir)) {
+        if (-not (Test-Path -LiteralPath $dir)) {
+            try {
+                New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            } catch {
+                throw "Invoke-Curl: Failed to create directory '$dir'. $_"
+            }
+        }
+    }
+
+    # Сбор аргументов
     $args = @()
-    if ($UseProxy) { $args += @('--socks5', $ProxyUrl) }
-    if ($Fail)    { $args += '-f' }
-    if ($Silent)  { $args += '-s' }
-    if ($Follow)  { $args += '-L' }
+
+    if ($UseProxy) {
+        if ([string]::IsNullOrWhiteSpace($ProxyUrl)) {
+            throw "Invoke-Curl: ProxyUrl must be specified when -UseProxy is set."
+        }
+        $args += @('--socks5', $ProxyUrl)
+        # Для HTTP-прокси можно использовать: $args += @('-x', $ProxyUrl)
+    }
+
+    if ($Fail)   { $args += '-f' }       # или '--fail-with-body' если ваша сборка curl поддерживает
+    if ($Follow) { $args += '-L' }
+
+    if ($Silent) { $args += @('-s', '-S') } else { $args += '-S' }
+
     $args += @('-o', $OutFile, $Url)
 
-    $result = & curl @args 2>$null
-    return $LASTEXITCODE -eq 0
+    # Запуск строго указанного curl.exe
+    & $curlPath @args
+    $code = $LASTEXITCODE
+    return $code
 }
 
 # ================== INI HELPERS ==================
