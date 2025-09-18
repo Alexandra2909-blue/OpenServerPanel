@@ -1,6 +1,4 @@
 {
-    "parameters":
-    {
         "assert.active": "Enable Zend assertions (On/Off). Disabled in production for performance.",
         "assert.bail": "Stop execution on failed assertion (On/Off).",
         "assert.callback": "User callback invoked on assertion failure. Empty to disable.",
@@ -123,5 +121,4 @@
         "zend.enable_gc": "Enable Zend Garbage Collector for cyclic garbage (On/Off).",
         "zend.max_allowed_stack_size": "Maximum allowed C stack size per request in bytes (−1 unlimited).",
         "zend.reserved_stack_size": "Reserved C stack space to safely handle stack overflows (bytes)."
-    }
 }
