@@ -13,6 +13,7 @@ $JsonPath       = "..\resources\matrix\matrix-infodata.json"
 $BinMatrixPath  = "..\resources\matrix\matrix-bin.json"
 $BaseAddonsDir  = "..\addons"
 $BaseBinDir     = "..\bin"
+$CacheDir       = "..\cache"  # Cache directory for downloaded files
 $UseProxy       = $true
 $ProxyUrl       = "127.0.0.1:1086"
 # ==========================================================
@@ -156,6 +157,61 @@ function Extract-MoveFromSubfolder {
     }
 }
 
+# ================== CACHE HELPERS ==================
+function Get-CacheFileName {
+    param([string]$Url)
+    # Create a safe filename from URL by replacing special characters
+    $safeFileName = $Url -replace '[\\/:"*?<>|]', '_'
+    $safeFileName = $safeFileName -replace 'https?_+', ''
+    $safeFileName = $safeFileName -replace '_+', '_'
+    $safeFileName = $safeFileName.Trim('_')
+
+    # Add file extension based on URL
+    if ($Url -match '\.(zip|exe|phar|dll|pem|txt|json)(\?.*)?$') {
+        $extension = $matches[1]
+    } else {
+        $extension = "bin"
+    }
+
+    return "$safeFileName.$extension"
+}
+
+function Get-CachedFile {
+    param([string]$Url, [string]$OutFile)
+
+    # Ensure cache directory exists
+    if (-not (Test-Path $CacheDir)) {
+        New-Item -ItemType Directory -Path $CacheDir -Force | Out-Null
+        Write-Success "Created cache directory: $CacheDir"
+    }
+
+    $cacheFileName = Get-CacheFileName -Url $Url
+    $cachedFilePath = Join-Path $CacheDir $cacheFileName
+
+    # Check if file exists in cache
+    if (Test-Path $cachedFilePath) {
+        Write-Stage "CACHE" "Using cached file" $cacheFileName
+        Copy-Item $cachedFilePath $OutFile -Force
+        Write-Success "File retrieved from cache"
+        return $true
+    }
+
+    # Download to cache first
+    Write-Stage "DOWNLOAD" "Downloading to cache" $Url
+    if (Invoke-Curl -Url $Url -OutFile $cachedFilePath -Silent -Follow -Fail) {
+        if (Test-Path $cachedFilePath) {
+            $fileSize = [math]::Round((Get-Item $cachedFilePath).Length / 1MB, 2)
+            Write-Success "File downloaded to cache ($fileSize MB)"
+            # Copy from cache to target location
+            Copy-Item $cachedFilePath $OutFile -Force
+            return $true
+        }
+    }
+
+    Write-Error "Failed to download file: $Url"
+    return $false
+}
+
 function Invoke-Curl {
     param(
         [string]$Url,
@@ -251,12 +307,7 @@ function Get-ModulesList {
 function Download-Addon {
     param([string]$DownloadUrl, [string]$ZipPath)
     try {
-        Write-Stage "DOWNLOAD" "Downloading archive" $DownloadUrl
-        Invoke-Curl -Url $DownloadUrl -OutFile $ZipPath -Fail -Silent -Follow
-        if (-not (Test-Path $ZipPath)) { Write-Error "Failed to download file: $ZipPath"; return $false }
-        $fileSize = [math]::Round((Get-Item $ZipPath).Length / 1MB, 2)
-        Write-Success "Archive downloaded successfully ($fileSize MB)"
-        return $true
+        return Get-CachedFile -Url $DownloadUrl -OutFile $ZipPath
     } catch { Write-Error "Error during download: $_"; return $false }
 }
 
@@ -277,7 +328,7 @@ function Process-InstantClient {
             $fileName = Split-Path $downloadUrl -Leaf
             $zipPath = Join-Path (Get-Location) $fileName
             Write-Stage "INSTANTCLIENT" "Downloading $fileName"
-            if (Download-Addon -DownloadUrl $downloadUrl -ZipPath $zipPath) { $downloadedFiles += $zipPath }
+            if (Get-CachedFile -Url $downloadUrl -OutFile $zipPath) { $downloadedFiles += $zipPath }
             else { Write-Warning "Failed to download $fileName, continuing with others" }
         }
         if ($downloadedFiles.Count -eq 0) { Write-Error "Failed to download any InstantClient archives"; return $false }
@@ -484,7 +535,7 @@ function Generate-HelpFiles {
         Write-Success "Created $generated help files"
         return
     } elseif ($AddonName -like "ImageMagick-*") {
-        # Для ImageMagick выполняем без параметров
+        # For ImageMagick execute without parameters
         $executables = Get-ChildItem -Path $DestDir -Filter *.exe -Recurse -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -notin $exclude }
         $generated = 0
@@ -614,7 +665,10 @@ function Install-ToolFromArchive {
     $tmp = "$env:TEMP\tmpdir_$(Get-Random)"
     $zip = "$tmp.zip"
     Write-Stage "DOWNLOAD" "Downloading archive" $Url
-    if ($UseProxy) { & curl --socks5 $ProxyUrl -L -o $zip $Url 2>$null } else { Invoke-WebRequest $Url -OutFile $zip }
+    if (-not (Get-CachedFile -Url $Url -OutFile $zip)) {
+        Write-Error "Failed to download tool archive"
+        return $false
+    }
     Expand-Archive $zip $tmp -Force
 
     foreach ($file in $Files) {
@@ -660,7 +714,7 @@ function Install-ToolFromArchive {
 function Install-DirectDownload {
     param([string]$Url, [string]$TargetName)
     Write-Stage "DOWNLOAD" "Direct downloading" $Url
-    Invoke-Curl -Url $Url -OutFile "$BaseBinDir\$TargetName" -Silent -Follow
+    Get-CachedFile -Url $Url -OutFile "$BaseBinDir\$TargetName"
     Write-Success "File downloaded: $BaseBinDir\$TargetName"
 }
 
@@ -737,8 +791,7 @@ function Copy-ComposerFiles {
         $destPath = $downloads[$url]
         Write-Stage "COMPOSER" "Downloading $(Split-Path $destPath -Leaf)" $url
         try {
-            Invoke-Curl -Url $url -OutFile $destPath -Fail -Silent -Follow
-            if (Test-Path $destPath) { Write-Success "Downloaded: $(Split-Path $destPath -Leaf)" }
+            if (Get-CachedFile -Url $url -OutFile $destPath) { Write-Success "Downloaded: $(Split-Path $destPath -Leaf)" }
             else { Write-Warning "Failed to download: $(Split-Path $destPath -Leaf)" }
         } catch { Write-Warning "Error downloading $(Split-Path $destPath -Leaf): $_" }
     }
@@ -794,8 +847,8 @@ function Copy-AdditionalFiles {
             Ensure-ParentDirectory $destPath
             if (Test-Path $destPath) { Remove-Item $destPath -Force }
             try {
-                Invoke-Curl -Url $url -OutFile $destPath -Fail -Silent -Follow
-                if (Test-Path $destPath) { Write-Success "Downloaded: $destPath" } else { Write-Warning "Failed to download: $destPath" }
+                if (Get-CachedFile -Url $url -OutFile $destPath) { Write-Success "Downloaded: $destPath" }
+                else { Write-Warning "Failed to download: $destPath" }
             } catch { Write-Warning "Error downloading to $destPath : $_" }
         }
     }
@@ -864,6 +917,7 @@ function Get-ModuleType {
     $types = @{
         "Apache*" = "Apache"
         "Bind*" = "Bind"
+        "Blackfire*" = "Blackfire"
         "Mailpit*" = "Mailpit"
         "MariaDB*" = "MariaDB"
         "Memcached*" = "Memcached"
@@ -917,6 +971,14 @@ function Process-BindModule { param([string]$ModuleName, [string]$ZipPath, [stri
         }
         Write-Success "Bind module processing completed"; return $true
     } catch { Write-Error "Error processing Bind module: $_"; return $false }
+}
+
+function Process-BlackfireModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
+    try {
+        Write-Stage "BLACKFIRE-PROCESSING" "Processing Blackfire module"
+        Expand-Archive -Path $ZipPath -DestinationPath $DestDir -Force
+        Write-Success "Blackfire module processing completed"; return $true
+    } catch { Write-Error "Error processing Blackfire module: $_"; return $false }
 }
 
 function Process-MailpitModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
@@ -975,7 +1037,7 @@ function Process-MySQLModule { param([string]$ModuleName, [string]$ZipPath, [str
         if (-not (Extract-MoveFromSubfolder -ZipPath $ZipPath -DestDir $DestDir -Filter "mysql*")) { throw "extract failed" }
         Write-Stage "MYSQL-PROCESSING" "Cleaning up unnecessary MySQL files"
         [void](Remove-DirectoriesIfExists -Base $DestDir -Dirs @("data", "include", "docs", "lib\plugin\debug", "lib\debug"))
-        foreach ($file in @("my-default.ini","bin\mysqld-debug.exe","bin\mysql_configurator.exe","lib\libmysqld.dll")) {
+        foreach ($file in @("my-default.ini","bin\mysqld-debug.exe","bin\mysqltest_embedded.exe","bin\mysqltest_embedded.exe","bin\mysql_configurator.exe","lib\libmysqld.dll")) {
             $filePath = Join-Path $DestDir $file
             if (Test-Path $filePath) { Remove-Item $filePath -Force -ErrorAction SilentlyContinue; Write-Success "Removed file: $file" }
         }
@@ -1202,10 +1264,10 @@ function Process-PHPModule { param([string]$ModuleName, [string]$ZipPath, [strin
         $extUrl = $module.DownloadUrl_ext
         Write-Stage "PHP-PROCESSING" "Downloading bin package"
         $binZip = "php-bin.zip"
-        if (-not (Download-Addon -DownloadUrl $binUrl -ZipPath $binZip)) { throw "Failed to download bin package" }
+        if (-not (Get-CachedFile -Url $binUrl -OutFile $binZip)) { throw "Failed to download bin package" }
         Write-Stage "PHP-PROCESSING" "Downloading ext package"
         $extZip = "php-ext.zip"
-        if (-not (Download-Addon -DownloadUrl $extUrl -ZipPath $extZip)) { throw "Failed to download ext package" }
+        if (-not (Get-CachedFile -Url $extUrl -OutFile $extZip)) { throw "Failed to download ext package" }
         Write-Stage "PHP-PROCESSING" "Extracting bin package"
         Expand-Archive -Path $binZip -DestinationPath $DestDir -Force; Remove-Item $binZip -Force
         Write-Stage "PHP-PROCESSING" "Extracting ext package"
@@ -1227,8 +1289,7 @@ function Process-PHPModule { param([string]$ModuleName, [string]$ZipPath, [strin
         try {
             $browscapUrl = "https://browscap.org/stream?q=Lite_PHP_BrowsCapINI"
             $browscapPath = Join-Path $DestDir "browscap.ini"
-            Invoke-Curl -Url $browscapUrl -OutFile $browscapPath -Fail -Silent -Follow
-            if (Test-Path $browscapPath) { Write-Success "Downloaded browscap.ini" }
+            if (Get-CachedFile -Url $browscapUrl -OutFile $browscapPath) { Write-Success "Downloaded browscap.ini" }
         } catch { Write-Warning "Failed to download browscap.ini: $_" }
 
         Write-Stage "PHP-PROCESSING" "Creating phpinfo.php"
@@ -1252,8 +1313,7 @@ function Process-PHPModule { param([string]$ModuleName, [string]$ZipPath, [strin
                 $snmpUrl = $netSnmpUrls[$phpVersion]
                 $snmpZip = "net-snmp.zip"
                 $snmpTmpDir = "$env:TEMP\netsnmp_$(Get-Random)"
-                Invoke-Curl -Url $snmpUrl -OutFile $snmpZip -Fail -Silent -Follow
-                if (Test-Path $snmpZip) {
+                if (Get-CachedFile -Url $snmpUrl -OutFile $snmpZip) {
                     Expand-Archive -Path $snmpZip -DestinationPath $snmpTmpDir -Force
                     $mibsDestDir = Join-Path $DestDir "extras\mibs"
                     if (-not (Test-Path $mibsDestDir)) { New-Item -ItemType Directory -Force -Path $mibsDestDir | Out-Null }
@@ -1287,7 +1347,7 @@ function Process-PHPModule { param([string]$ModuleName, [string]$ZipPath, [strin
 function Process-PostgreSQLModule { param([string]$ModuleName, [string]$ZipPath, [string]$DestDir)
     try {
         Write-Stage "POSTGRESQL-PROCESSING" "Processing PostgreSQL module"
-        # особенность: внутри pgsql
+        # Feature: internal pgsql directory
         $tmpDir = New-TempDir
         Expand-Zip -ZipPath $ZipPath -DestDir $tmpDir
         $pgsqlDir = Get-ChildItem -Path $tmpDir -Directory | Where-Object { $_.Name -eq "pgsql" } | Select-Object -First 1
@@ -1338,8 +1398,7 @@ function Process-RedisModule { param([string]$ModuleName, [string]$ZipPath, [str
         try {
             $rejsonUrl = "https://github.com/zkteco-home/RedisJson/raw/master/rejson.dll"
             $rejsonPath = Join-Path $DestDir "rejson.dll"
-            Invoke-WebRequest -Uri $rejsonUrl -OutFile $rejsonPath -UseBasicParsing
-            Write-Success "Downloaded rejson.dll to module directory"
+            if (Get-CachedFile -Url $rejsonUrl -OutFile $rejsonPath) { Write-Success "Downloaded rejson.dll to module directory" }
         } catch { Write-Warning "Failed to download rejson.dll: $_" }
         Write-Success "Redis module processing completed"; return $true
     } catch { Write-Error "Error processing Redis module: $_"; return $false }
@@ -1387,6 +1446,7 @@ function Extract-Module {
         $result = switch ($moduleType) {
             "Apache"      { Process-ApacheModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
             "Bind"        { Process-BindModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
+            "Blackfire"   { Process-BlackfireModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
             "Mailpit"     { Process-MailpitModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
             "MariaDB"     { Process-MariaDBModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
             "Memcached"   { Process-MemcachedModule -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir }
@@ -1498,7 +1558,7 @@ function Copy-ModuleBundleFiles {
 Write-Banner "AUTOMATED OSPANEL ADDONS AND UTILITIES BUILD" "Cyan"
 Write-Host ""
 
-$folders = @("..\addons", "..\modules", "..\bin", "..\config", "..\data", "..\user\geo")
+$folders = @("..\addons", "..\modules", "..\bin", "..\config", "..\data", "..\user\geo", $CacheDir)
 foreach ($folder in $folders) {
     if (-not (Test-Path $folder)) {
         New-Item -ItemType Directory -Path $folder -Force | Out-Null
@@ -1593,7 +1653,7 @@ if (-not $moduleConfig) {
         try {
             $ospanelDataDir = Join-Path $DestDir "ospanel_data\help"
             if (-not (Test-Path $ospanelDataDir)) { New-Item -ItemType Directory -Force -Path $ospanelDataDir | Out-Null }
-            if (-not (Download-Addon -DownloadUrl $module.DownloadUrl -ZipPath $ZipPath)) { $script:FailedModules++; continue }
+            if (-not (Get-CachedFile -Url $module.DownloadUrl -OutFile $ZipPath)) { $script:FailedModules++; continue }
             if (-not (Extract-Module -ModuleName $ModuleName -ZipPath $ZipPath -DestDir $DestDir)) { $script:FailedModules++; continue }
             Generate-ModuleHelpFiles -ModuleName $ModuleName -DestDir $DestDir -Module $module
             Copy-ModuleBundleFiles -ModuleName $ModuleName -DestDir $DestDir
