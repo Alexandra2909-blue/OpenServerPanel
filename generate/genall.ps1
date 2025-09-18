@@ -191,13 +191,11 @@ function Get-CachedFile {
 
     # Download to cache first
     Write-Stage "DOWNLOAD" "Downloading to cache" $Url
-    Invoke-Curl -Url $Url -OutFile $cachedFilePath -Silent -Follow -Fail
+    $downloadSuccess = Invoke-Curl -Url $Url -OutFile $cachedFilePath -Silent -Follow -Fail
 
-    # Check if download was successful
-    if (Test-Path $cachedFilePath) {
+    if ($downloadSuccess -and (Test-Path $cachedFilePath) -and (Get-Item $cachedFilePath).Length -gt 0) {
         $fileSize = [math]::Round((Get-Item $cachedFilePath).Length / 1MB, 2)
         Write-Success "File downloaded to cache ($fileSize MB)"
-        # Copy from cache to target location
         Copy-Item $cachedFilePath $OutFile -Force
         return $true
     }
@@ -207,20 +205,16 @@ function Get-CachedFile {
 }
 
 function Invoke-Curl {
-    param(
-        [string]$Url,
-        [string]$OutFile,
-        [switch]$Silent,
-        [switch]$Follow,
-        [switch]$Fail
-    )
+    param([string]$Url, [string]$OutFile, [switch]$Silent, [switch]$Follow, [switch]$Fail)
     $args = @()
     if ($UseProxy) { $args += @('--socks5', $ProxyUrl) }
     if ($Fail)    { $args += '-f' }
     if ($Silent)  { $args += '-s' }
     if ($Follow)  { $args += '-L' }
     $args += @('-o', $OutFile, $Url)
-    & curl @args 2>$null
+
+    $result = & curl @args 2>$null
+    return $LASTEXITCODE -eq 0
 }
 
 # ================== INI HELPERS ==================
@@ -1054,97 +1048,146 @@ function Process-NginxModule { param([string]$ModuleName, [string]$ZipPath, [str
 
 function Generate-PHPIniFiles {
     param([string]$DestDir,[string]$PhpVersion,[string]$MatrixIniFile,[string]$CommentsIniFile)
+
     $matrixJson = Get-Content -Raw -Path $MatrixIniFile | ConvertFrom-Json
     $commentsJson = Get-Content -Raw -Path $CommentsIniFile | ConvertFrom-Json
-    $data = $matrixJson.php_extensions_matrix.data
-    $commentMap = @{}
-    foreach ($p in $commentsJson.PSObject.Properties) { $commentMap[$p.Name] = $p.Value }
-    $byExtension = $data | Group-Object -Property extension
-    $preIniPath = Join-Path $DestDir "pre-ini.ini"
-    $preIniLines = New-Object System.Collections.Generic.List[string]
-    foreach ($extGroup in $byExtension | Sort-Object Name) {
-        $extName = $extGroup.Name
-        $rows = @()
-        foreach ($row in $extGroup.Group) {
-            $param = [string]$row.parameter
-            $useFlag = [bool]$row.use
-            $verValueProp = $row.php_versions.PSObject.Properties | Where-Object { $_.Name -eq $PhpVersion } | Select-Object -First 1
-            if ($null -eq $verValueProp) { continue }
-            $valueText = if ($verValueProp.Value -ne $null) { [string]$verValueProp.Value } else { "" }
-            if ($valueText -eq "(none)") { continue }
-            if ($valueText -eq "(empty)") { $valueText = "" }
-            $commentText = if ($commentMap.ContainsKey($param)) { [string]$commentMap[$param] } else { "" }
-            $rows += [pscustomobject]@{ Parameter=$param; Value=$valueText; Comment=$commentText; IsCommented=(-not $useFlag) }
-        }
-        if ($rows.Count -eq 0) { continue }
-        $separator = ";---------------------------------------"
-        $preIniLines.Add($separator); $preIniLines.Add("; $extName"); $preIniLines.Add($separator); $preIniLines.Add("")
-        foreach ($r in $rows) {
-            $prefix = if ($r.IsCommented) { "; " } else { "" }
-            $paramWithPrefix = "{0}{1}" -f $prefix, $r.Parameter
-            $paddedParam = $paramWithPrefix.PadRight(38)
-            $val = ($r.Value ?? "")
-            $baseLine = "{0} = {1}" -f $paddedParam, $val
-            if ([string]::IsNullOrEmpty($r.Comment)) {
-                $preIniLines.Add($baseLine.TrimEnd())
-            } else {
-                if ($baseLine.Length -le 62) {
-                    $preIniLines.Add(("{0}  ; {1}" -f $baseLine.PadRight(62), $r.Comment).TrimEnd())
-                } else {
-                    $preIniLines.Add(("{0}  ; {1}" -f $baseLine, $r.Comment).TrimEnd())
-                }
-            }
-        }
-        $preIniLines.Add("")
-    }
-    Set-Content -Path $preIniPath -Encoding UTF8 -Value ($preIniLines -join [Environment]::NewLine)
 
-    $phpIniPath = Join-Path $DestDir "php.ini"
-    $phpIniLines = New-Object System.Collections.Generic.List[string]
-    foreach ($extGroup in $byExtension | Sort-Object Name) {
-        $extName = $extGroup.Name
-        $rows = @()
-        foreach ($row in $extGroup.Group) {
-            $param = [string]$row.parameter
-            $useFlag = [bool]$row.use
-            $verValueProp = $row.php_versions.PSObject.Properties | Where-Object { $_.Name -eq $PhpVersion } | Select-Object -First 1
-            if ($null -eq $verValueProp) { continue }
-            $valueText = if ($verValueProp.Value -ne $null) { [string]$verValueProp.Value } else { "" }
-            if ($valueText -eq "(none)") { continue }
-            if ($valueText -eq "(empty)") { $valueText = "" }
-            $commentText = if ($commentMap.ContainsKey($param)) { [string]$commentMap[$param] } else { "" }
-            $rows += [pscustomobject]@{ Parameter=$param; Value=$valueText; Comment=$commentText; IsCommented=(-not $useFlag) }
-        }
-        if ($rows.Count -eq 0) { continue }
-        $equalPosition = if ($extName -eq "ddtrace") {
-            $maxActualParamLength = 0
+    # Определяем тип файла по имени матричного файла
+    $isInitFile = $MatrixIniFile -like "*matrix-init*"
+
+    # Все файлы используют одинаковую структуру данных
+    $data = $matrixJson.php_extensions_matrix.data
+
+    # Создаем карту комментариев - теперь обе структуры одинаковые
+    $commentMap = @{}
+    foreach ($p in $commentsJson.PSObject.Properties) {
+        $commentMap[$p.Name] = $p.Value
+    }
+
+    # Группируем данные по расширениям/группам
+    $byExtension = $data | Group-Object -Property extension
+
+    if ($isInitFile) {
+        # Создаем pre-php.ini - основные настройки PHP
+        $preIniPath = Join-Path $DestDir "pre-php.ini"
+        $preIniLines = New-Object System.Collections.Generic.List[string]
+
+        # Добавляем заголовок
+        $preIniLines.Add("[PHP]")
+        $preIniLines.Add("")
+
+        foreach ($extGroup in $byExtension | Sort-Object Name) {
+            $extName = $extGroup.Name
+            $rows = @()
+
+            foreach ($row in $extGroup.Group) {
+                $param = [string]$row.parameter
+                $useFlag = [bool]$row.use
+                $verValueProp = $row.php_versions.PSObject.Properties | Where-Object { $_.Name -eq $PhpVersion } | Select-Object -First 1
+                if ($null -eq $verValueProp) { continue }
+                $valueText = if ($verValueProp.Value -ne $null) { [string]$verValueProp.Value } else { "" }
+                if ($valueText -eq "(none)") { continue }
+                if ($valueText -eq "(empty)") { $valueText = "" }
+                $commentText = if ($commentMap.ContainsKey($param)) { [string]$commentMap[$param] } else { "" }
+                $rows += [pscustomobject]@{ Parameter=$param; Value=$valueText; Comment=$commentText; IsCommented=(-not $useFlag) }
+            }
+
+            if ($rows.Count -eq 0) { continue }
+
+            # Создаем комментированный раздел для pre-php.ini
+            $separator = ";---------------------------------------"
+
+            $preIniLines.Add($separator)
+            $preIniLines.Add("; $extName")
+            $preIniLines.Add($separator)
+            $preIniLines.Add("")
+
             foreach ($r in $rows) {
                 $prefix = if ($r.IsCommented) { "; " } else { "" }
-                $fullParamLength = $prefix.Length + $r.Parameter.Length
-                if ($fullParamLength -gt $maxActualParamLength) { $maxActualParamLength = $fullParamLength }
-            }
-            $maxActualParamLength
-        } else { 38 }
-        $phpIniLines.Add("[$extName]"); $phpIniLines.Add("")
-        foreach ($r in $rows) {
-            $prefix = if ($r.IsCommented) { "; " } else { "" }
-            $paramWithPrefix = "{0}{1}" -f $prefix, $r.Parameter
-            $paddedParam = $paramWithPrefix.PadRight($equalPosition)
-            $val = ($r.Value ?? "")
-            $baseLine = "{0} = {1}" -f $paddedParam, $val
-            if ([string]::IsNullOrEmpty($r.Comment)) {
-                $phpIniLines.Add($baseLine.TrimEnd())
-            } else {
-                if ($baseLine.Length -le 62) {
-                    $phpIniLines.Add(("{0}  ; {1}" -f $baseLine.PadRight(62), $r.Comment).TrimEnd())
+                $paramWithPrefix = "{0}{1}" -f $prefix, $r.Parameter
+                $paddedParam = $paramWithPrefix.PadRight(38)
+                $val = ($r.Value ?? "")
+                $baseLine = "{0} = {1}" -f $paddedParam, $val
+
+                if ([string]::IsNullOrEmpty($r.Comment)) {
+                    $preIniLines.Add($baseLine.TrimEnd())
                 } else {
-                    $phpIniLines.Add(("{0}  ; {1}" -f $baseLine, $r.Comment).TrimEnd())
+                    if ($baseLine.Length -le 62) {
+                        $preIniLines.Add(("{0}  ; {1}" -f $baseLine.PadRight(62), $r.Comment).TrimEnd())
+                    } else {
+                        $preIniLines.Add(("{0}  ; {1}" -f $baseLine, $r.Comment).TrimEnd())
+                    }
                 }
             }
+            $preIniLines.Add("")
         }
+        Set-Content -Path $preIniPath -Encoding UTF8 -Value ($preIniLines -join [Environment]::NewLine)
+
+    } else {
+        # Создаем php.ini - настройки расширений
+        $phpIniPath = Join-Path $DestDir "php.ini"
+        $phpIniLines = New-Object System.Collections.Generic.List[string]
+
+        # Добавляем заголовок для расширений
+        $phpIniLines.Add(";---------------------------------------")
+        $phpIniLines.Add("; Extensions settings")
+        $phpIniLines.Add(";---------------------------------------")
         $phpIniLines.Add("")
+
+        foreach ($extGroup in $byExtension | Sort-Object Name) {
+            $extName = $extGroup.Name
+            $rows = @()
+
+            foreach ($row in $extGroup.Group) {
+                $param = [string]$row.parameter
+                $useFlag = [bool]$row.use
+                $verValueProp = $row.php_versions.PSObject.Properties | Where-Object { $_.Name -eq $PhpVersion } | Select-Object -First 1
+                if ($null -eq $verValueProp) { continue }
+                $valueText = if ($verValueProp.Value -ne $null) { [string]$verValueProp.Value } else { "" }
+                if ($valueText -eq "(none)") { continue }
+                if ($valueText -eq "(empty)") { $valueText = "" }
+                $commentText = if ($commentMap.ContainsKey($param)) { [string]$commentMap[$param] } else { "" }
+                $rows += [pscustomobject]@{ Parameter=$param; Value=$valueText; Comment=$commentText; IsCommented=(-not $useFlag) }
+            }
+
+            if ($rows.Count -eq 0) { continue }
+
+            # Создаем раздел в квадратных скобках для php.ini
+            $phpIniLines.Add("[$extName]")
+            $phpIniLines.Add("")
+
+            # Специальная обработка для ddtrace (выравнивание по знаку равенства)
+            $equalPosition = if ($extName -eq "ddtrace") {
+                $maxActualParamLength = 0
+                foreach ($r in $rows) {
+                    $prefix = if ($r.IsCommented) { "; " } else { "" }
+                    $fullParamLength = $prefix.Length + $r.Parameter.Length
+                    if ($fullParamLength -gt $maxActualParamLength) { $maxActualParamLength = $fullParamLength }
+                }
+                $maxActualParamLength
+            } else { 38 }
+
+            foreach ($r in $rows) {
+                $prefix = if ($r.IsCommented) { "; " } else { "" }
+                $paramWithPrefix = "{0}{1}" -f $prefix, $r.Parameter
+                $paddedParam = $paramWithPrefix.PadRight($equalPosition)
+                $val = ($r.Value ?? "")
+                $baseLine = "{0} = {1}" -f $paddedParam, $val
+
+                if ([string]::IsNullOrEmpty($r.Comment)) {
+                    $phpIniLines.Add($baseLine.TrimEnd())
+                } else {
+                    if ($baseLine.Length -le 62) {
+                        $phpIniLines.Add(("{0}  ; {1}" -f $baseLine.PadRight(62), $r.Comment).TrimEnd())
+                    } else {
+                        $phpIniLines.Add(("{0}  ; {1}" -f $baseLine, $r.Comment).TrimEnd())
+                    }
+                }
+            }
+            $phpIniLines.Add("")
+        }
+        Set-Content -Path $phpIniPath -Encoding UTF8 -Value ($phpIniLines -join [Environment]::NewLine)
     }
-    Set-Content -Path $phpIniPath -Encoding UTF8 -Value ($phpIniLines -join [Environment]::NewLine)
 }
 
 function Generate-PHPExtIni {
@@ -1217,16 +1260,15 @@ function Generate-PHPExtIni {
 
 function Merge-PHPIniFiles {
     param([string]$DestDir,[string]$PhpVersion)
-    $preIni = Join-Path $DestDir 'pre-ini.ini'
+    $preIni = Join-Path $DestDir 'pre-php.ini'
     $extIni = Join-Path $DestDir 'ext.ini'
     $phpIni = Join-Path $DestDir 'php.ini'
     $mergedIni = Join-Path $DestDir 'php.ini.merged'
     if ((Test-Path $preIni) -and (Test-Path $extIni) -and (Test-Path $phpIni)) {
         $content = @(
-            "[PHP]","",
             (Get-Content $preIni),
             (Get-Content $extIni),
-            "",";---------------------------------------","; Extensions settings",";---------------------------------------","",
+            "",
             (Get-Content $phpIni)
         )
         Set-Content $mergedIni -Encoding UTF8 -Value $content
@@ -1234,7 +1276,7 @@ function Merge-PHPIniFiles {
         $phpExe = Join-Path $DestDir 'php.exe'
         if (Test-Path $phpExe) {
             $phpVersionOutput = (& $phpExe -v)[0] -replace '^PHP ([\d\.]+).*','$1'
-            $moduleIniPath = Join-Path $DestDir 'ospanel_data\module.dat'
+            $moduleIniPath = Join-Path $DestDir 'ospanel_data\module.ini'
             if (Test-Path $moduleIniPath) {
                 $contentDat = Get-Content $moduleIniPath -Raw
                 $newContent = $contentDat -replace '(\bversion\s*=\s*)[\d\.]+', ('version                 = ' + $phpVersionOutput)
@@ -1323,11 +1365,14 @@ function Process-PHPModule { param([string]$ModuleName, [string]$ZipPath, [strin
         }
 
         Write-Stage "PHP-PROCESSING" "Generating PHP configuration files"
+        $matrixInitFile = "..\resources\matrix\matrix-init.json"
+        $commentsInitFile = "..\resources\matrix\matrix-init-comments.json"
         $matrixIniFile = "..\resources\matrix\matrix-ini.json"
         $commentsIniFile = "..\resources\matrix\matrix-ini-comments.json"
         $matrixExtFile = "..\resources\matrix\matrix-ext-comments.json"
-        if ((Test-Path $matrixIniFile) -and (Test-Path $commentsIniFile)) {
+        if ((Test-Path $matrixIniFile) -and (Test-Path $commentsIniFile) -and (Test-Path $matrixIniFile) -and (Test-Path $commentsIniFile)) {
             try {
+                Generate-PHPIniFiles -DestDir $DestDir -PhpVersion $phpVersion -MatrixIniFile $matrixInitFile -CommentsIniFile $commentsInitFile
                 Generate-PHPIniFiles -DestDir $DestDir -PhpVersion $phpVersion -MatrixIniFile $matrixIniFile -CommentsIniFile $commentsIniFile
                 Generate-PHPExtIni -DestDir $DestDir -MatrixExtFile $matrixExtFile
                 Merge-PHPIniFiles -DestDir $DestDir -PhpVersion $phpVersion
