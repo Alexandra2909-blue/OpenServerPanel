@@ -165,15 +165,7 @@ function Get-CacheFileName {
     $safeFileName = $safeFileName -replace 'https?_+', ''
     $safeFileName = $safeFileName -replace '_+', '_'
     $safeFileName = $safeFileName.Trim('_')
-
-    # Add file extension based on URL
-    if ($Url -match '\.(zip|exe|phar|dll|pem|txt|json)(\?.*)?$') {
-        $extension = $matches[1]
-    } else {
-        $extension = "bin"
-    }
-
-    return "$safeFileName.$extension"
+    return "$safeFileName"
 }
 
 function Get-CachedFile {
@@ -198,14 +190,15 @@ function Get-CachedFile {
 
     # Download to cache first
     Write-Stage "DOWNLOAD" "Downloading to cache" $Url
-    if (Invoke-Curl -Url $Url -OutFile $cachedFilePath -Silent -Follow -Fail) {
-        if (Test-Path $cachedFilePath) {
-            $fileSize = [math]::Round((Get-Item $cachedFilePath).Length / 1MB, 2)
-            Write-Success "File downloaded to cache ($fileSize MB)"
-            # Copy from cache to target location
-            Copy-Item $cachedFilePath $OutFile -Force
-            return $true
-        }
+    Invoke-Curl -Url $Url -OutFile $cachedFilePath -Silent -Follow -Fail
+
+    # Check if download was successful
+    if (Test-Path $cachedFilePath) {
+        $fileSize = [math]::Round((Get-Item $cachedFilePath).Length / 1MB, 2)
+        Write-Success "File downloaded to cache ($fileSize MB)"
+        # Copy from cache to target location
+        Copy-Item $cachedFilePath $OutFile -Force
+        return $true
     }
 
     Write-Error "Failed to download file: $Url"
@@ -1036,8 +1029,8 @@ function Process-MySQLModule { param([string]$ModuleName, [string]$ZipPath, [str
         Write-Stage "MYSQL-PROCESSING" "Processing MySQL module"
         if (-not (Extract-MoveFromSubfolder -ZipPath $ZipPath -DestDir $DestDir -Filter "mysql*")) { throw "extract failed" }
         Write-Stage "MYSQL-PROCESSING" "Cleaning up unnecessary MySQL files"
-        [void](Remove-DirectoriesIfExists -Base $DestDir -Dirs @("data", "include", "docs", "lib\plugin\debug", "lib\debug"))
-        foreach ($file in @("my-default.ini","bin\mysqld-debug.exe","bin\mysqltest_embedded.exe","bin\mysqltest_embedded.exe","bin\mysql_configurator.exe","lib\libmysqld.dll")) {
+        [void](Remove-DirectoriesIfExists -Base $DestDir -Dirs @("data", "include", "docs", "lib\plugin\debug", "lib\debug", "mysql-test"))
+        foreach ($file in @("my-default.ini","bin\mysqld-debug.exe","bin\mysqltest_embedded.exe","bin\mysqltest_embedded.exe","bin\mysql_client_test_embedded.exe","bin\mysql_client_test.exe","bin\mysql_configurator.exe","lib\libmysqld.dll")) {
             $filePath = Join-Path $DestDir $file
             if (Test-Path $filePath) { Remove-Item $filePath -Force -ErrorAction SilentlyContinue; Write-Success "Removed file: $file" }
         }
