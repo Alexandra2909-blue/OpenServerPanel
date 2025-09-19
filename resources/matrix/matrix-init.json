@@ -1653,14 +1653,14 @@
             "use": false,
             "php_versions":
             {
-                "7.2": "\"{root_dir}/user/browscap/lite_php_browscap.ini\"",
-                "7.3": "\"{root_dir}/user/browscap/lite_php_browscap.ini\"",
-                "7.4": "\"{root_dir}/user/browscap/lite_php_browscap.ini\"",
-                "8.0": "\"{root_dir}/user/browscap/lite_php_browscap.ini\"",
-                "8.1": "\"{root_dir}/user/browscap/lite_php_browscap.ini\"",
-                "8.2": "\"{root_dir}/user/browscap/lite_php_browscap.ini\"",
-                "8.3": "\"{root_dir}/user/browscap/lite_php_browscap.ini\"",
-                "8.4": "\"{root_dir}/user/browscap/lite_php_browscap.ini\""
+                "7.2": "\"{root_dir}/modules/{module_name}/browscap.ini\"",
+                "7.3": "\"{root_dir}/modules/{module_name}/browscap.ini\"",
+                "7.4": "\"{root_dir}/modules/{module_name}/browscap.ini\"",
+                "8.0": "\"{root_dir}/modules/{module_name}/browscap.ini\"",
+                "8.1": "\"{root_dir}/modules/{module_name}/browscap.ini\"",
+                "8.2": "\"{root_dir}/modules/{module_name}/browscap.ini\"",
+                "8.3": "\"{root_dir}/modules/{module_name}/browscap.ini\"",
+                "8.4": "\"{root_dir}/modules/{module_name}/browscap.ini\""
             }
         },
         {
