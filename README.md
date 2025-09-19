@@ -39,7 +39,7 @@
 
 ### Distinctive сharacteristics
 
-![](https://img.shields.io/badge/SSL-ON-blue) ![](https://img.shields.io/badge/HTTP/2-ON-blue) ![](https://img.shields.io/badge/Brotli-ON-blue) ![](https://img.shields.io/badge/IDN_&_IPv6_support-ON-blue) ![](https://img.shields.io/badge/Composer_&_Node_&_NPM-Yes!-blue)
+![](https://img.shields.io/badge/SSL-Yes!-blue) ![](https://img.shields.io/badge/HTTP/2-Yes!-blue) ![](https://img.shields.io/badge/Brotli-Yes!-blue) ![](https://img.shields.io/badge/IDN_&_IPv6_support-Yes!-blue) ![](https://img.shields.io/badge/Composer_&_Node_&_NPM-Yes!-blue)
 
 **RUN MULTIPLE PHP VERSIONS AT THE SAME TIME!**
 
