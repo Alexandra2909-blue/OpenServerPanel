@@ -1103,7 +1103,7 @@
                 "Russian": "https://www.php.net/manual/ru/"
             },
             "DownloadUrl": "https://files.ospanel.io/~windows/releases/php-7.2.34-nts-Win32-vc15-x64.zip",
-            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-7.2.34-bin-nts-Win32-vc15-x64.zip",
+            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-bin-pack-7.2.34-nts-Win32-vc15-x64.zip",
             "DownloadUrl_ext": "https://github.com/OSPanel/php-windows-builder/releases/download/ext-pack/php-ext-pack-7.2-nts-Win32-vc15-x64.zip",
             "help": "--help",
             "main":
@@ -1128,7 +1128,7 @@
                 "Russian": "https://www.php.net/manual/ru/"
             },
             "DownloadUrl": "https://files.ospanel.io/~windows/releases/php-7.3.33-nts-Win32-vc15-x64.zip",
-            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-7.3.33-bin-nts-Win32-vc15-x64.zip",
+            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-bin-pack-7.3.33-nts-Win32-vc15-x64.zip",
             "DownloadUrl_ext": "https://github.com/OSPanel/php-windows-builder/releases/download/ext-pack/php-ext-pack-7.3-nts-Win32-vc15-x64.zip",
             "help": "--help",
             "main":
@@ -1153,7 +1153,7 @@
                 "Russian": "https://www.php.net/manual/ru/"
             },
             "DownloadUrl": "https://files.ospanel.io/~windows/releases/php-7.4.33-nts-Win32-vc15-x64.zip",
-            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-7.4.33-bin-nts-Win32-vc15-x64.zip",
+            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-bin-pack-7.4.33-nts-Win32-vc15-x64.zip",
             "DownloadUrl_ext": "https://github.com/OSPanel/php-windows-builder/releases/download/ext-pack/php-ext-pack-7.4-nts-Win32-vc15-x64.zip",
             "help": "--help",
             "main":
@@ -1178,7 +1178,7 @@
                 "Russian": "https://www.php.net/manual/ru/"
             },
             "DownloadUrl": "https://files.ospanel.io/~windows/releases/php-8.0.30-nts-Win32-vs16-x64.zip",
-            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-8.0.30-bin-nts-Win32-vs16-x64.zip",
+            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-bin-pack-8.0.30-nts-Win32-vs16-x64.zip",
             "DownloadUrl_ext": "https://github.com/OSPanel/php-windows-builder/releases/download/ext-pack/php-ext-pack-8.0-nts-Win32-vs16-x64.zip",
             "help": "--help",
             "main":
@@ -1203,7 +1203,7 @@
                 "Russian": "https://www.php.net/manual/ru/"
             },
             "DownloadUrl": "https://files.ospanel.io/~windows/releases/php-8.1.33-nts-Win32-vs16-x64.zip",
-            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-8.1.33-bin-nts-Win32-vs16-x64.zip",
+            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-bin-pack-8.1.33-nts-Win32-vs16-x64.zip",
             "DownloadUrl_ext": "https://github.com/OSPanel/php-windows-builder/releases/download/ext-pack/php-ext-pack-8.1-nts-Win32-vs16-x64.zip",
             "help": "--help",
             "main":
@@ -1228,7 +1228,7 @@
                 "Russian": "https://www.php.net/manual/ru/"
             },
             "DownloadUrl": "https://files.ospanel.io/~windows/releases/php-8.2.29-nts-Win32-vs16-x64.zip",
-            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-8.2.29-bin-nts-Win32-vs16-x64.zip",
+            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-bin-pack-8.2.29-nts-Win32-vs16-x64.zip",
             "DownloadUrl_ext": "https://github.com/OSPanel/php-windows-builder/releases/download/ext-pack/php-ext-pack-8.2-nts-Win32-vs16-x64.zip",
             "help": "--help",
             "main":
@@ -1253,7 +1253,7 @@
                 "Russian": "https://www.php.net/manual/ru/"
             },
             "DownloadUrl": "https://files.ospanel.io/~windows/releases/php-8.3.25-nts-Win32-vs16-x64.zip",
-            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-8.3.25-bin-nts-Win32-vs16-x64.zip",
+            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-bin-pack-8.3.25-nts-Win32-vs16-x64.zip",
             "DownloadUrl_ext": "https://github.com/OSPanel/php-windows-builder/releases/download/ext-pack/php-ext-pack-8.3-nts-Win32-vs16-x64.zip",
             "help": "--help",
             "main":
@@ -1278,7 +1278,7 @@
                 "Russian": "https://www.php.net/manual/ru/"
             },
             "DownloadUrl": "https://files.ospanel.io/~windows/releases/php-8.4.12-nts-Win32-vs17-x64.zip",
-            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-8.4.12-bin-nts-Win32-vs17-x64.zip",
+            "DownloadUrl_bin": "https://files.ospanel.io/~windows/releases/php-bin-pack-8.4.12-nts-Win32-vs17-x64.zip",
             "DownloadUrl_ext": "https://github.com/OSPanel/php-windows-builder/releases/download/ext-pack/php-ext-pack-8.4-nts-Win32-vs17-x64.zip",
             "help": "--help",
             "main":
@@ -1569,7 +1569,7 @@
             {
                 "English": "https://unbound.docs.nlnetlabs.nl/en/latest/"
             },
-            "DownloadUrl": "https://nlnetlabs.nl/downloads/unbound/unbound-1.23.1.zip",
+            "DownloadUrl": "https://nlnetlabs.nl/downloads/unbound/unbound-1.24.0.zip",
             "help": "-h",
             "main":
             {
@@ -1582,7 +1582,7 @@
                 "license_type": "BSD License 2.0",
                 "min_windows_ver": "6.1.7601",
                 "timestamp": "1651770000",
-                "version": "1.23.1"
+                "version": "1.24.0"
             }
         }
     }
