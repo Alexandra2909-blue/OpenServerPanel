@@ -620,7 +620,7 @@ function Generate-IniFile {
     }
     $iniDir = Split-Path $IniPath -Parent
     if (-not (Test-Path $iniDir)) { New-Item -ItemType Directory -Force -Path $iniDir | Out-Null }
-    $iniContent | Out-File -FilePath $IniPath -Encoding utf8 -Force
+    $iniContent | Out-File -FilePath $IniPath -Encoding ascii -Force
     Write-Success "addon.ini file created"
 }
 
@@ -1177,7 +1177,7 @@ function Generate-PHPIniFiles {
             }
             $preIniLines.Add("")
         }
-        Set-Content -Path $preIniPath -Encoding UTF8 -Value ($preIniLines -join [Environment]::NewLine)
+        Set-Content -Path $preIniPath -Encoding ASCII -Value ($preIniLines -join [Environment]::NewLine)
 
     } else {
         # Создаем php.ini - настройки расширений
@@ -1242,7 +1242,7 @@ function Generate-PHPIniFiles {
             }
             $phpIniLines.Add("")
         }
-        Set-Content -Path $phpIniPath -Encoding UTF8 -Value ($phpIniLines -join [Environment]::NewLine)
+        Set-Content -Path $phpIniPath -Encoding ASCII -Value ($phpIniLines -join [Environment]::NewLine)
     }
 }
 
@@ -1256,7 +1256,7 @@ function Generate-PHPExtIni {
     $comments = @{}
     if (Test-Path $MatrixExtFile) {
         try {
-            $commentsJson = Get-Content -Path $MatrixExtFile -Raw -Encoding UTF8 | ConvertFrom-Json
+            $commentsJson = Get-Content -Path $MatrixExtFile -Raw -Encoding ASCII | ConvertFrom-Json
             if ($commentsJson.PSObject.Properties['extensions']) {
                 $commentsJson.extensions.PSObject.Properties | ForEach-Object { $comments[$_.Name] = $_.Value }
             }
@@ -1311,7 +1311,7 @@ function Generate-PHPExtIni {
         $iniLines += "; Zend extensions"; $iniLines += ""
         foreach ($ext in $foundZend) { $iniLines += (Format-ExtensionLine -type "zend_extension" -extension $ext -comments $comments -commented $true) }
     }
-    Set-Content -Path $extIniPath -Value $iniLines -Encoding UTF8
+    Set-Content -Path $extIniPath -Value $iniLines -Encoding ASCII
 }
 
 function Merge-PHPIniFiles {
@@ -1327,7 +1327,7 @@ function Merge-PHPIniFiles {
             "",
             (Get-Content $phpIni)
         )
-        Set-Content $mergedIni -Encoding UTF8 -Value $content
+        Set-Content $mergedIni -Encoding ASCII -Value $content
         Remove-Item $preIni,$extIni,$phpIni -Force -ErrorAction SilentlyContinue
         $phpExe = Join-Path $DestDir 'php.exe'
         if (Test-Path $phpExe) {
