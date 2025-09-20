@@ -254,11 +254,15 @@ echo %ESC%[32mbrotli%ESC%[0m                      {lang_utilite_brotli}
 echo %ESC%[32mcurl%ESC%[0m                        {lang_utilite_curl}
 echo %ESC%[32mdust%ESC%[0m                        {lang_utilite_dust}
 echo %ESC%[32mfd%ESC%[0m                          {lang_utilite_fd}
+echo %ESC%[32mgeoiplookup%ESC%[0m                 {lang_utilite_geoiplookup6}
+echo %ESC%[32mgeoiplookup6%ESC%[0m                {lang_utilite_geoiplookup6}
 echo %ESC%[32mgzip%ESC%[0m                        {lang_utilite_gzip}
 echo %ESC%[32mjq%ESC%[0m                          {lang_utilite_jq}
 echo %ESC%[32mmmdbinspect%ESC%[0m                 {lang_utilite_mmdbinspect}
+echo %ESC%[32moha%ESC%[0m                         {lang_utilite_oha}
 echo %ESC%[32msass%ESC%[0m                        {lang_utilite_sass}
 echo %ESC%[32msd%ESC%[0m                          {lang_utilite_sd}
+echo %ESC%[32msqlite3%ESC%[0m                     {lang_utilite_sqlite3}
 echo %ESC%[32mwget%ESC%[0m                        {lang_utilite_wget}
 echo %ESC%[32mxh%ESC%[0m                          {lang_utilite_xh}
 goto end
