@@ -629,7 +629,8 @@
                 "license_type": "Apache License 2.0",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "2.4.65"
+                "version": "2.4.65",
+                "web_engine": "yes"
             }
         },
         "Bind":
@@ -1092,7 +1093,8 @@
                 "license_type": "FreeBSD License",
                 "min_windows_ver": "10.0.10240",
                 "timestamp": "1651770000",
-                "version": "1.29.1"
+                "version": "1.29.1",
+                "web_engine": "yes"
             }
         },
         "PHP-7.2":
@@ -1116,6 +1118,7 @@
                 "license": "https://www.php.net/license/3_01.txt",
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
+                "php_engine": "yes",
                 "timestamp": "1651770000",
                 "version": "7.2.34"
             }
@@ -1141,6 +1144,7 @@
                 "license": "https://www.php.net/license/3_01.txt",
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
+                "php_engine": "yes",
                 "timestamp": "1651770000",
                 "version": "7.3.33"
             }
@@ -1166,6 +1170,7 @@
                 "license": "https://www.php.net/license/3_01.txt",
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
+                "php_engine": "yes",
                 "timestamp": "1651770000",
                 "version": "7.4.33"
             }
@@ -1191,6 +1196,7 @@
                 "license": "https://www.php.net/license/3_01.txt",
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
+                "php_engine": "yes",
                 "timestamp": "1651770000",
                 "version": "8.0.30"
             }
@@ -1216,6 +1222,7 @@
                 "license": "https://www.php.net/license/3_01.txt",
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
+                "php_engine": "yes",
                 "timestamp": "1651770000",
                 "version": "8.1.33"
             }
@@ -1241,6 +1248,7 @@
                 "license": "https://www.php.net/license/3_01.txt",
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
+                "php_engine": "yes",
                 "timestamp": "1651770000",
                 "version": "8.2.29"
             }
@@ -1266,6 +1274,7 @@
                 "license": "https://www.php.net/license/3_01.txt",
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
+                "php_engine": "yes",
                 "timestamp": "1651770000",
                 "version": "8.3.25"
             }
@@ -1291,6 +1300,7 @@
                 "license": "https://www.php.net/license/3_01.txt",
                 "license_type": "PHP License 3.01",
                 "min_windows_ver": "10.0.10240",
+                "php_engine": "yes",
                 "timestamp": "1651770000",
                 "version": "8.4.12"
             }
