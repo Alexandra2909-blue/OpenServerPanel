@@ -658,7 +658,7 @@
         {
             "parameter": "blackfire.agent_socket",
             "extension": "blackfire",
-            "use": false,
+            "use": true,
             "php_versions":
             {
                 "7.2": "\"tcp://127.0.0.1:8307\"",
