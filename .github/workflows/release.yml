@@ -64,9 +64,57 @@ jobs:
 
           Write-Host "Set AppVersion to $ver and AppVersion_ to $verUnderscore in OpenServerPanel.iss"
 
-      - name: Run generators (genall.ps1 and gendb.bat)
+      - name: Prepare PostgreSQL data dirs (reset ACL and owner)
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+
+          function Reset-AclRecursive {
+            param([string]$Path)
+            if (-not (Test-Path $Path)) { return }
+            # снять атрибуты
+            attrib -r -h -s "$Path" /S /D 2>$null
+            # включить наследование временно, чтобы снять странные ACE
+            icacls "$Path" /inheritance:e /T /C | Out-Null
+            # удалить всё и пересоздать
+            try { Remove-Item "$Path" -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+            New-Item -ItemType Directory -Force -Path "$Path" | Out-Null
+
+            # отключить наследование и установить явные ACE
+            icacls "$Path" /inheritance:d /T /C | Out-Null
+            # Права: текущий пользователь, Users, SYSTEM — Full
+            $me = "$env:USERDOMAIN\$env:USERNAME"
+            icacls "$Path" /grant:r "$me:(OI)(CI)F" /T /C | Out-Null
+            icacls "$Path" /grant:r "*S-1-5-18:(OI)(CI)F" /T /C | Out-Null      # SYSTEM
+            icacls "$Path" /grant:r "*S-1-5-32-545:(OI)(CI)F" /T /C | Out-Null  # BUILTIN\Users
+            # Владелец — текущий пользователь
+            takeown /F "$Path" /R /D Y | Out-Null
+            cmd /c "icacls ""$Path"" /setowner ""$me"" /T /C" | Out-Null
+
+            # ещё раз снять атрибуты на случай системных файлов
+            attrib -r -h -s "$Path" /S /D 2>$null
+          }
+
+          $modules = Join-Path (Get-Location) 'modules'
+          $pgVers = 11..17 | ForEach-Object { "PostgreSQL-$_" }
+          foreach ($v in $pgVers) {
+            $mod   = Join-Path $modules $v
+            $data  = Join-Path $mod 'ospanel_data\default_data'
+            $tmp   = Join-Path $mod 'temp'
+            Reset-AclRecursive -Path $data
+            Reset-AclRecursive -Path $tmp
+          }
+
+          Start-Sleep -Seconds 2
+
+      - name: Run generators (genall.ps1 and gendb.bat)
+        shell: pwsh
+        env:
+          TMP:  D:\a\_temp
+          TEMP: D:\a\_temp
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Test-Path $env:TEMP)) { New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null }
           Set-Location generate
           # Выполнить PowerShell-скрипт
           .\genall.ps1
