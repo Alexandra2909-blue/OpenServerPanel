@@ -67,6 +67,43 @@ This program makes use of the Zend Scripting Language Engine:<br>Zend&nbsp;Engin
 </tbody></table>
 <hr>
 <h1>Configuration</h1>
+<h2><a name="module_amqp">amqp</a></h2>
+<table>
+<tbody><tr class="h"><th>Version</th><th>2.1.2</th></tr>
+<tr class="h"><th>Compiled</th><th>Sep 21 2025 @ 08:55:13</th></tr>
+<tr class="h"><th>AMQP protocol version</th><th>0-9-1</th></tr>
+<tr class="h"><th>librabbitmq version</th><th>0.15.0</th></tr>
+<tr class="h"><th>Default max channels per connection</th><th>256</th></tr>
+<tr class="h"><th>Default max frame size</th><th>131072</th></tr>
+<tr class="h"><th>Default heartbeats interval</th><th>0</th></tr>
+</tbody></table><table>
+<tbody><tr class="h"><th>Directive</th><th>Local Value</th><th>Master Value</th></tr>
+<tr><td class="e">amqp.auto_ack</td><td class="v">0</td><td class="v">0</td></tr>
+<tr><td class="e">amqp.cacert</td><td class="v">C:/OSPanel/data/ssl/cacert.pem</td><td class="v">C:/OSPanel/data/ssl/cacert.pem</td></tr>
+<tr><td class="e">amqp.cert</td><td class="v"><i>no value</i></td><td class="v"><i>no value</i></td></tr>
+<tr><td class="e">amqp.channel_max</td><td class="v">256</td><td class="v">256</td></tr>
+<tr><td class="e">amqp.connect_timeout</td><td class="v">0</td><td class="v">0</td></tr>
+<tr><td class="e">amqp.deserialization_depth</td><td class="v">128</td><td class="v">128</td></tr>
+<tr><td class="e">amqp.frame_max</td><td class="v">131072</td><td class="v">131072</td></tr>
+<tr><td class="e">amqp.global_prefetch_count</td><td class="v">0</td><td class="v">0</td></tr>
+<tr><td class="e">amqp.global_prefetch_size</td><td class="v">0</td><td class="v">0</td></tr>
+<tr><td class="e">amqp.heartbeat</td><td class="v">0</td><td class="v">0</td></tr>
+<tr><td class="e">amqp.host</td><td class="v">localhost</td><td class="v">localhost</td></tr>
+<tr><td class="e">amqp.key</td><td class="v"><i>no value</i></td><td class="v"><i>no value</i></td></tr>
+<tr><td class="e">amqp.login</td><td class="v">guest</td><td class="v">guest</td></tr>
+<tr><td class="e">amqp.password</td><td class="v">guest</td><td class="v">guest</td></tr>
+<tr><td class="e">amqp.port</td><td class="v">5672</td><td class="v">5672</td></tr>
+<tr><td class="e">amqp.prefetch_count</td><td class="v">3</td><td class="v">3</td></tr>
+<tr><td class="e">amqp.prefetch_size</td><td class="v">0</td><td class="v">0</td></tr>
+<tr><td class="e">amqp.read_timeout</td><td class="v">0</td><td class="v">0</td></tr>
+<tr><td class="e">amqp.rpc_timeout</td><td class="v">0</td><td class="v">0</td></tr>
+<tr><td class="e">amqp.sasl_method</td><td class="v">AMQP_SASL_METHOD_PLAIN</td><td class="v">AMQP_SASL_METHOD_PLAIN</td></tr>
+<tr><td class="e">amqp.serialization_depth</td><td class="v">128</td><td class="v">128</td></tr>
+<tr><td class="e">amqp.timeout</td><td class="v"><i>no value</i></td><td class="v"><i>no value</i></td></tr>
+<tr><td class="e">amqp.verify</td><td class="v">1</td><td class="v">1</td></tr>
+<tr><td class="e">amqp.vhost</td><td class="v">/</td><td class="v">/</td></tr>
+<tr><td class="e">amqp.write_timeout</td><td class="v">0</td><td class="v">0</td></tr>
+</tbody></table>
 <h2><a name="module_apcu">apcu</a></h2>
 <table>
 <tbody><tr><td class="e">APCu Support </td><td class="v">Enabled </td></tr>
@@ -447,7 +484,7 @@ Datadog PHP tracer extension<br><strong>For help, check out <a href="https://doc
 <tbody><tr><td class="e">Datadog tracing support </td><td class="v">enabled </td></tr>
 <tr><td class="e">Version </td><td class="v">1.12.1 </td></tr>
 <tr><td class="e">DATADOG TRACER CONFIGURATION </td><td class="v">{
-    "date": "2025-09-21T14:13:28Z",
+    "date": "2025-09-21T17:56:50Z",
     "os_name": "Windows NT USER-PC 10.0 build 26100 (Windows 10) AMD64",
     "os_version": "10.0",
     "version": "1.12.1",
@@ -2383,7 +2420,7 @@ A library and extension that provides objects for scientific computing in PHP.</
 <table>
 <tbody><tr class="h"><th>yaconf support</th><th>enabled</th></tr>
 <tr><td class="e">version </td><td class="v">1.1.2 </td></tr>
-<tr><td class="e">yaconf config last check time </td><td class="v">Sun Sep 21 17:13:28 2025
+<tr><td class="e">yaconf config last check time </td><td class="v">Sun Sep 21 20:56:50 2025
  </td></tr>
 </tbody></table>
 <table>
@@ -2456,8 +2493,8 @@ enabled</th></tr>
 <tr><td class="e">Used memory </td><td class="v">9168528 </td></tr>
 <tr><td class="e">Free memory </td><td class="v">24385904 </td></tr>
 <tr><td class="e">Wasted memory </td><td class="v">0 </td></tr>
-<tr><td class="e">Interned Strings Used memory </td><td class="v">1287288 </td></tr>
-<tr><td class="e">Interned Strings Free memory </td><td class="v">5003680 </td></tr>
+<tr><td class="e">Interned Strings Used memory </td><td class="v">1303880 </td></tr>
+<tr><td class="e">Interned Strings Free memory </td><td class="v">4987088 </td></tr>
 <tr><td class="e">Cached scripts </td><td class="v">1 </td></tr>
 <tr><td class="e">Cached keys </td><td class="v">1 </td></tr>
 <tr><td class="e">Max keys </td><td class="v">16229 </td></tr>
@@ -2747,7 +2784,7 @@ The Zephir Parser delivered as a C extension for the PHP language.</td></tr>
 <tr><td class="e">$_SERVER['REQUEST_METHOD']</td><td class="v">GET</td></tr>
 <tr><td class="e">$_SERVER['SERVER_PROTOCOL']</td><td class="v">HTTP/1.1</td></tr>
 <tr><td class="e">$_SERVER['GATEWAY_INTERFACE']</td><td class="v">CGI/1.1</td></tr>
-<tr><td class="e">$_SERVER['REMOTE_PORT']</td><td class="v">55835</td></tr>
+<tr><td class="e">$_SERVER['REMOTE_PORT']</td><td class="v">52192</td></tr>
 <tr><td class="e">$_SERVER['SCRIPT_FILENAME']</td><td class="v">C:/OSPanel/home/example.local/phpinfo.php</td></tr>
 <tr><td class="e">$_SERVER['SERVER_ADMIN']</td><td class="v">[no address given]</td></tr>
 <tr><td class="e">$_SERVER['CONTEXT_DOCUMENT_ROOT']</td><td class="v">C:/OSPanel/home/example.local</td></tr>
@@ -2778,7 +2815,7 @@ The Zephir Parser delivered as a C extension for the PHP language.</td></tr>
 <tr><td class="e">$_SERVER['HTTP_HOST']</td><td class="v">example.local</td></tr>
 <tr><td class="e">$_SERVER['proxy-nokeepalive']</td><td class="v">1</td></tr>
 <tr><td class="e">$_SERVER['SSL_SESSION_RESUMED']</td><td class="v">Initial</td></tr>
-<tr><td class="e">$_SERVER['SSL_SESSION_ID']</td><td class="v">d6caef89217f8e1c1f251cc7dd8b0fd7cd0883565ce63954dd6f0a534395ad69</td></tr>
+<tr><td class="e">$_SERVER['SSL_SESSION_ID']</td><td class="v">c7b085e4061a6d98f24cc8c2be0a4fd5ae9adc4790edaed3079f68a2ba5879ec</td></tr>
 <tr><td class="e">$_SERVER['SSL_SERVER_A_SIG']</td><td class="v">ecdsa-with-SHA256</td></tr>
 <tr><td class="e">$_SERVER['SSL_SERVER_A_KEY']</td><td class="v">id-ecPublicKey</td></tr>
 <tr><td class="e">$_SERVER['SSL_SERVER_I_DN']</td><td class="v">CN=Open Server Panel,O=Open Server Panel,ST=Local Network,C=EU,emailAddress=root@ospanel.local</td></tr>
@@ -2807,11 +2844,11 @@ The Zephir Parser delivered as a C extension for the PHP language.</td></tr>
 <tr><td class="e">$_SERVER['SSL_SERVER_S_DN_CN']</td><td class="v">example.local</td></tr>
 <tr><td class="e">$_SERVER['SSL_TLS_SNI']</td><td class="v">example.local</td></tr>
 <tr><td class="e">$_SERVER['HTTPS']</td><td class="v">on</td></tr>
-<tr><td class="e">$_SERVER['UNIQUE_ID']</td><td class="v">aNAICCum50O7HevC-2XRzQAAAEQ</td></tr>
+<tr><td class="e">$_SERVER['UNIQUE_ID']</td><td class="v">aNA8YpMUDBTqDHH-0VOs7QAAAEc</td></tr>
 <tr><td class="e">$_SERVER['FCGI_ROLE']</td><td class="v">RESPONDER</td></tr>
 <tr><td class="e">$_SERVER['PHP_SELF']</td><td class="v">/phpinfo.php</td></tr>
-<tr><td class="e">$_SERVER['REQUEST_TIME_FLOAT']</td><td class="v">1758464008.2406</td></tr>
-<tr><td class="e">$_SERVER['REQUEST_TIME']</td><td class="v">1758464008</td></tr>
+<tr><td class="e">$_SERVER['REQUEST_TIME_FLOAT']</td><td class="v">1758477410.6084</td></tr>
+<tr><td class="e">$_SERVER['REQUEST_TIME']</td><td class="v">1758477410</td></tr>
 <tr><td class="e">$_SERVER['argv']</td><td class="v"><pre>Array
 (
 )
