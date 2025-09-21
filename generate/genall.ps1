@@ -1276,7 +1276,7 @@ function Generate-PHPExtIni {
         } catch { Write-Warning "Error loading extension comments: $_" }
     }
     $mandatoryList = @("mbstring", "openssl", "apcu", "igbinary", "msgpack", "brotli", "lz4", "lzf", "zstd", "sockets", "psr", "curl")
-    $commonList = @("bz2","crypto","enchant","exif","fileinfo","ftp","gd","gd2","gettext","gmp","hrtime","imap","intl","mailparse","mcrypt","memcache","memcached","mysqli","odbc","pdo_mysql","pdo_sqlite","redis","scrypt","soap","sodium","sqlite3","timezonedb","wincache","xmlrpc","xsl","yaml","zip")
+    $commonList = @("bz2","crypto","enchant","exif","fileinfo","ftp","gd","gd2","gettext","gmp","hrtime","imap","intl","mailparse","mcrypt","memcache","memcached","mysqli","odbc","pdo_mysql","pdo_sqlite","redis","scrypt","soap","sodium","sqlite3","timezonedb","xmlrpc","xsl","yaml","zip")
     $zendList = @("opcache","xdebug","scoutapm")
     function Format-ExtensionLine {
         param([string]$type,[string]$extension,[hashtable]$comments,[bool]$commented = $false)
