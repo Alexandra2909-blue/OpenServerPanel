@@ -100,8 +100,22 @@ if not "!ec!"=="0" (
   endlocal & exit /b 1
 )
 
+ping -n 3 127.0.0.1
+
 :: После initdb: у initdb создаются собственные postgresql.conf/pg_hba.conf.
-del "%DATA_DIR%\pg_hba.conf" "%DATA_DIR%\postgresql.conf"
+for %%F in ("pg_hba.conf" "postgresql.conf") do (
+  if exist "%DATA_DIR%\%%~F" (
+    attrib -r -s -h "%DATA_DIR%\%%~F" >nul 2>nul
+    del /f /q /a "%DATA_DIR%\%%~F" >nul 2>nul
+    if exist "%DATA_DIR%\%%~F" (
+      echo [WARN] Не удалось удалить: "%DATA_DIR%\%%~F"
+    ) else (
+      echo [OK] Удалён: "%DATA_DIR%\%%~F"
+    )
+  ) else (
+    echo [INFO] Файл не найден: "%DATA_DIR%\%%~F"
+  )
+)
 
 :: Удаляем временный каталог
 if exist "%TMP_DIR%" rd /s /q "%TMP_DIR%"
