@@ -23,13 +23,32 @@ jobs:
           git lfs install
           git lfs pull
 
+      # ВОССТАНОВЛЕНИЕ КЭША ЗАГРУЗОК
+      - name: Restore downloads cache
+        uses: actions/cache@v4
+        with:
+          path: cache
+          key: downloads-${{ inputs.version }}-${{ hashFiles('resources/matrix/*.json', 'generate/genall.ps1', 'resources/composer/*') }}
+          restore-keys: |
+            downloads-${{ inputs.version }}-
+            downloads-
+
+      # На случай первого запуска — создаём папку кэша
+      - name: Ensure cache folder exists
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "cache")) { New-Item -ItemType Directory -Path "cache" -Force | Out-Null }
+          Write-Host "Cache folder ready: $(Resolve-Path cache)"
+
       - name: Remove old Inno Setup (if exists)
+        shell: pwsh
         run: |
           if (Test-Path "C:\Program Files (x86)\Inno Setup 6") {
             Remove-Item "C:\Program Files (x86)\Inno Setup 6" -Recurse -Force
           }
 
       - name: Download and install Inno Setup 6
+        shell: pwsh
         run: |
           Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "innosetup.exe"
           Start-Process .\innosetup.exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
@@ -55,15 +74,13 @@ jobs:
           }
 
           $content = Get-Content -Raw -Path $issPath
-
-          # Обновляем/вставляем строки с #define в начале файла
           $content = $content -replace '(?m)^\#define\s+AppVersion\s+.*$', "#define AppVersion      `"$ver`""
           $content = $content -replace '(?m)^\#define\s+AppVersion_\s+.*$', "#define AppVersion_     `"$verUnderscore`""
-
           Set-Content -Path $issPath -Value $content -Encoding UTF8
 
           Write-Host "Set AppVersion to $ver and AppVersion_ to $verUnderscore in OpenServerPanel.iss"
 
+      # Подготовка данных PostgreSQL: очистка/ACL для data и temp
       - name: Prepare PostgreSQL data dirs (reset ACL and owner)
         shell: pwsh
         run: |
@@ -73,30 +90,22 @@ jobs:
             param([string]$Path)
             if (-not (Test-Path $Path)) { return }
 
-            # снять атрибуты
             attrib -r -h -s "$Path" /S /D 2>$null
-
-            # включить наследование временно
             icacls "$Path" /inheritance:e /T /C | Out-Null
 
-            # удалить и пересоздать
             try { Remove-Item "$Path" -Recurse -Force -ErrorAction SilentlyContinue } catch {}
             New-Item -ItemType Directory -Force -Path "$Path" | Out-Null
 
-            # отключить наследование и задать явные ACE
             icacls "$Path" /inheritance:d /T /C | Out-Null
 
             $me = "$env:USERDOMAIN\$env:USERNAME"
-            # Владелец: текущий пользователь
             takeown /F "$Path" /R /D Y | Out-Null
             cmd /c "icacls ""$Path"" /setowner ""$me"" /T /C" | Out-Null
 
-            # Полные права: текущий пользователь, SYSTEM, BUILTIN\Users
             icacls "$Path" /grant:r "${me}:(OI)(CI)F" /T /C | Out-Null
             icacls "$Path" /grant:r "*S-1-5-18:(OI)(CI)F" /T /C | Out-Null      # SYSTEM
             icacls "$Path" /grant:r "*S-1-5-32-545:(OI)(CI)F" /T /C | Out-Null  # BUILTIN\Users
 
-            # ещё раз снять атрибуты
             attrib -r -h -s "$Path" /S /D 2>$null
           }
 
@@ -120,10 +129,20 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if (-not (Test-Path $env:TEMP)) { New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null }
+
+          # Листинг кэша перед генерацией (для диагностики)
+          if (Test-Path "..\cache") {
+            Write-Host "Pre-run cache listing (..\\cache):"
+            Get-ChildItem -Recurse -Force "..\cache" | Select-Object FullName, Length | Format-Table -AutoSize
+          } elseif (Test-Path "cache") {
+            Write-Host "Pre-run cache listing (cache):"
+            Get-ChildItem -Recurse -Force "cache" | Select-Object FullName, Length | Format-Table -AutoSize
+          }
+
           Set-Location generate
-          # Выполнить PowerShell-скрипт
+          # genall.ps1 использует $CacheDir = "..\cache" — это указывает на корневую папку cache
           .\genall.ps1
-          # Выполнить батник (через cmd, чтобы соблюсти кодовую страницу cmd)
+          # gendb.bat — инициализация БД
           cmd /c gendb.bat
           Set-Location ..
 
@@ -142,3 +161,23 @@ jobs:
         with:
           name: open-server-panel-setup
           path: release/*.exe
+
+      # Диагностика содержимого кэша перед сохранением
+      - name: List cache dir
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path "cache") {
+            Write-Host "Post-run cache listing:"
+            Get-ChildItem -Recurse -Force "cache" | Select-Object FullName, Length | Format-Table -AutoSize
+          } else {
+            Write-Host "Cache directory not found."
+          }
+
+      # СОХРАНЕНИЕ КЭША ПОСЛЕ СБОРКИ
+      - name: Save downloads cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: cache
+          key: downloads-${{ inputs.version }}-${{ hashFiles('resources/matrix/*.json', 'generate/genall.ps1', 'resources/composer/*') }}
