@@ -22,7 +22,7 @@ echo [%date% %time%] Starting MySQL initialization...
 echo.
 
 :: Define database versions array
-set "DB_VERSIONS=MySQL-5.6 MySQL-5.7 MySQL-8.0 MySQL-8.4"
+set "DB_VERSIONS= MySQL-5.7 MySQL-8.0 MySQL-8.4"
 
 :: Process each database version
 for %%V in (%DB_VERSIONS%) do (
@@ -60,7 +60,7 @@ set "db_dir=%OSP_ROOT_DIR%\modules\%VERSION%"
 set "db_dir_unix=%OSP_ROOT_DIR_UNIX%/modules/%VERSION%"
 set "data_dir=%OSP_ROOT_DIR%\modules\%VERSION%\ospanel_data\default_data"
 set "db_pipe= --protocol=PIPE --ssl-mode=DISABLED"
-if "%VERSION%"=="MySQL-5.6" ( set "db_pipe= --protocol=PIPE" )
+
 echo     📁 Checking if %VERSION% directory exists...
 if not exist "%db_dir%" (
     echo     ❌ ERROR: Directory %db_dir% does not exist!
@@ -207,14 +207,8 @@ set "version=%~1"
 set "db_dir=%~2"
 set "data_dir=%~3"
 
-if "%version%"=="MySQL-5.6" (
-    echo       📜 Using Perl script for MySQL 5.6...
-    perl scripts\mysql_install_db.pl --defaults-file="%db_dir%\my.ini" --basedir="%db_dir%" --datadir="%data_dir%" --skip-name-resolve --windows --verbose
-) else (
-    echo       🔧 Using mysqld initialize for %db_dir%
-    bin\mysqld.exe --defaults-file="%db_dir%\my.ini" --initialize-insecure --console --standalone
-
-)
+echo       🔧 Using mysqld initialize for %db_dir%
+bin\mysqld.exe --defaults-file="%db_dir%\my.ini" --initialize-insecure --console --standalone
 
 if !errorlevel! neq 0 (
     echo     ❌ ERROR: Database initialization failed for %version%
