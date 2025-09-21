@@ -132,7 +132,7 @@
         "varnish": "Varnish HTTP cache integration",
         "vld": "Vulcan Logic Dumper for opcode analysis",
         "win32service": "Windows service control (Windows only)",
-        "wincache": "Windows file and opcode cache",
+        "wincache": "Windows file cache",
         "xdiff": "File difference and patching",
         "xhprof": "Hierarchical profiler for PHP",
         "xlswriter": "Excel XLSX file writer",
