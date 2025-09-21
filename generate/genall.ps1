@@ -1309,7 +1309,7 @@ function Generate-PHPExtIni {
     $foundZend = $zendList | Where-Object { $extNames -contains $_ } | Sort-Object
     if ($foundZend.Count -gt 0) {
         $iniLines += "; Zend extensions"; $iniLines += ""
-        foreach ($ext in $foundZend) { $iniLines += (Format-ExtensionLine -type "zend_extension" -extension $ext -comments $comments -commented $true) }
+        foreach ($ext in $foundZend) { $commented = if ($ext -eq "opcache") { $false } else { $true } $iniLines += (Format-ExtensionLine -type "zend_extension" -extension $ext -comments $comments -commented $commented) }
     }
     Set-Content -Path $extIniPath -Value $iniLines -Encoding ASCII
 }
