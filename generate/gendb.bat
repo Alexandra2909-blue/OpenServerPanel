@@ -63,15 +63,15 @@ if not exist "%BIN_DIR%\initdb.exe" (
 
 :: Чистый старт: удалить старые data/temp и создать заново
 if exist "%TMP_DIR%" rd /s /q "%TMP_DIR%"
-if exist "%DATA_DIR%" rd /s /q "%DATA_DIR%"
+:: if exist "%DATA_DIR%" rd /s /q "%DATA_DIR%"
 
 mkdir "%TMP_DIR%" 2>nul
-mkdir "%DATA_DIR%" 2>nul
+:: mkdir "%DATA_DIR%" 2>nul
 
-if not exist "%DATA_DIR%" (
-  echo [%date% %time%] ❌ ERROR: Failed to create data dir: "%DATA_DIR%"
-  endlocal & exit /b 1
-)
+:: if not exist "%DATA_DIR%" (
+::   echo [%date% %time%] ❌ ERROR: Failed to create data dir: "%DATA_DIR%"
+::   endlocal & exit /b 1
+:: )
 
 :: Переменные окружения для initdb/psql
 set "PGDATA=%DATA_DIR%"
