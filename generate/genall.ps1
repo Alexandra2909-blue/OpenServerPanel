@@ -896,6 +896,22 @@ function Copy-AdditionalFiles {
             } catch { Write-Warning "Error downloading to $destPath : $_" }
         }
     }
+
+    $binDownloads = @(
+        @{ Url = "https://files.ospanel.io/dist/ospanel.exe";       Dest = "..\bin\ospanel.exe" },
+        @{ Url = "https://files.ospanel.io/dist/ospanel-debug.exe"; Dest = "..\bin\ospanel-debug.exe" }
+    )
+    foreach ($item in $binDownloads) {
+        $destPath = $item.Dest
+        Write-Stage "ADDITIONAL" "Downloading $(Split-Path $destPath -Leaf)" $item.Url
+        Ensure-ParentDirectory $destPath
+        if (Test-Path $destPath) { Remove-Item $destPath -Force }
+        try {
+            if (Get-CachedFile -Url $item.Url -OutFile $destPath) { Write-Success "Downloaded: $destPath" }
+            else { Write-Warning "Failed to download: $destPath" }
+        } catch { Write-Warning "Error downloading to $destPath : $_" }
+    }
+
     $localCopies = @{
         "..\resources\dist\README.txt" = "..\user\geo\README.txt"
         "..\bin\bat.exe" = "..\system\bin\bat.exe"
