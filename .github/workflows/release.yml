@@ -72,26 +72,31 @@ jobs:
           function Reset-AclRecursive {
             param([string]$Path)
             if (-not (Test-Path $Path)) { return }
+
             # снять атрибуты
             attrib -r -h -s "$Path" /S /D 2>$null
-            # включить наследование временно, чтобы снять странные ACE
+
+            # включить наследование временно
             icacls "$Path" /inheritance:e /T /C | Out-Null
-            # удалить всё и пересоздать
+
+            # удалить и пересоздать
             try { Remove-Item "$Path" -Recurse -Force -ErrorAction SilentlyContinue } catch {}
             New-Item -ItemType Directory -Force -Path "$Path" | Out-Null
 
-            # отключить наследование и установить явные ACE
+            # отключить наследование и задать явные ACE
             icacls "$Path" /inheritance:d /T /C | Out-Null
-            # Права: текущий пользователь, Users, SYSTEM — Full
+
             $me = "$env:USERDOMAIN\$env:USERNAME"
-            icacls "$Path" /grant:r "$me:(OI)(CI)F" /T /C | Out-Null
-            icacls "$Path" /grant:r "*S-1-5-18:(OI)(CI)F" /T /C | Out-Null      # SYSTEM
-            icacls "$Path" /grant:r "*S-1-5-32-545:(OI)(CI)F" /T /C | Out-Null  # BUILTIN\Users
-            # Владелец — текущий пользователь
+            # Владелец: текущий пользователь
             takeown /F "$Path" /R /D Y | Out-Null
             cmd /c "icacls ""$Path"" /setowner ""$me"" /T /C" | Out-Null
 
-            # ещё раз снять атрибуты на случай системных файлов
+            # Полные права: текущий пользователь, SYSTEM, BUILTIN\Users
+            icacls "$Path" /grant:r "${me}:(OI)(CI)F" /T /C | Out-Null
+            icacls "$Path" /grant:r "*S-1-5-18:(OI)(CI)F" /T /C | Out-Null      # SYSTEM
+            icacls "$Path" /grant:r "*S-1-5-32-545:(OI)(CI)F" /T /C | Out-Null  # BUILTIN\Users
+
+            # ещё раз снять атрибуты
             attrib -r -h -s "$Path" /S /D 2>$null
           }
 
