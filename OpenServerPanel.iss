@@ -27,16 +27,16 @@ VersionInfoCopyright    = Copyright (c) 2010-{#CurrentYear}, {#AppDomain}
 
 // Compression
 
-Compression          = lzma2/fast
-// Compression             = lzma2/ultra64
+// Compression          = lzma2/fast
+Compression             = lzma2/ultra64
 InternalCompressLevel   = ultra64
 LZMAUseSeparateProcess  = yes
 SolidCompression        = yes
 LZMABlockSize           = 262144
 LZMADictionarySize      = 262144
 LZMANumBlockThreads     = 4
-// LZMANumFastBytes        = 273
-LZMANumFastBytes     = 32
+LZMANumFastBytes        = 273
+// LZMANumFastBytes     = 32
 
 // Misc  
 
@@ -128,11 +128,11 @@ Name: "modules\blackfire";             Description: "Blackfire 2.29";        Typ
 
 Name: "modules\dns";                   Description: "DNS";                                                        Flags: disablenouninstallwarning
 Name: "modules\dns\bind";              Description: "Bind 9.17";             Types: full;                         Flags: disablenouninstallwarning; check: IsWindows10OrNewer
-Name: "modules\dns\unbound";           Description: "Unbound 1.23";          Types: full;                         Flags: disablenouninstallwarning
+Name: "modules\dns\unbound";           Description: "Unbound 1.24";          Types: full;                         Flags: disablenouninstallwarning
 
 Name: "modules\mail";                  Description: "Mail";                                                       Flags: disablenouninstallwarning
 Name: "modules\mail\mailpit";          Description: "Mailpit 1.27";          Types: full compact;                 Flags: disablenouninstallwarning
-Name: "modules\mail\smtp4dev";         Description: "Smtp4dev 3.9";          Types: full compact;                 Flags: disablenouninstallwarning
+Name: "modules\mail\smtp4dev";         Description: "Smtp4dev 3.10";          Types: full compact;                 Flags: disablenouninstallwarning
 
 Name: "modules\mariadb";               Description: "MariaDB";                                                    Flags: disablenouninstallwarning
 Name: "modules\mariadb\mariadb104";    Description: "MariaDB 10.4";          Types: full;                         Flags: disablenouninstallwarning
