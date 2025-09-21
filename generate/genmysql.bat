@@ -12,7 +12,7 @@ set "OSP_ROOT_DIR=%TMP_ROOT%"
 set "OSP_ROOT_DIR_UNIX=%TMP_ROOT:\=/%"
 
 :: Set UTF-8 encoding
-chcp 65001 > nul
+chcp 65001
 
 echo.
 echo ================================================================================
@@ -69,14 +69,14 @@ if not exist "%db_dir%" (
 
 echo     🧹 Cleaning old data and configuration...
 if exist "%data_dir%" (
-    rd /s /q "%data_dir%" 2>nul
+    rd /s /q "%data_dir%"
     if exist "%data_dir%" (
         echo     ⚠️  WARNING: Could not completely remove old data directory
     )
 )
 
 :: Clean old configuration files
-del "%db_dir%\*.ini" /q >nul 2>&1
+del "%db_dir%\*.ini" /q
 
 :: Set environment variables
 echo     🔧 Setting up environment...
@@ -98,17 +98,17 @@ if !errorlevel! neq 0 (
 :: Initialize database
 echo     💾 Installing database...
 cd /d "%db_dir%"
-copy my.ini my-default.ini >nul 2>&1
-copy my.ini my_print_defaults.ini >nul 2>&1
+copy my.ini my-default.ini
+copy my.ini my_print_defaults.ini
 
 call :initialize_database "%VERSION%" "%db_dir%" "%data_dir%"
 if !errorlevel! neq 0 exit /b 1
 
 echo     ⏳ Waiting for installation to complete...
-timeout /t 3 /nobreak > nul
+timeout /t 3 /nobreak
 
 :: Clean up temporary ini files
-del "*.ini" /q >nul 2>&1
+del "*.ini" /q
 
 :: Configure my.ini again for startup
 call :configure_db_ini "%db_dir%" "%VERSION%"
@@ -126,11 +126,11 @@ call :configure_timezone "%db_dir%" "%VERSION%"
 if !errorlevel! neq 0 exit /b 1
 
 echo     ⏳ Waiting for timezone configuration to complete...
-timeout /t 3 /nobreak > nul
+timeout /t 3 /nobreak
 
 :: Execute main installation SQL
 echo     🔧 Running main installation script...
-copy /Y "%OSP_ROOT_DIR%\generate\config\%VERSION%\my_configured.ini" "%db_dir%\my.ini" >nul
+copy /Y "%OSP_ROOT_DIR%\generate\config\%VERSION%\my_configured.ini" "%db_dir%\my.ini"
 call :replace_placeholders "%db_dir%\my.ini" "%OSP_ROOT_DIR_UNIX%" "%VERSION%"
 call :execute_installation_sql "%db_dir%" "%VERSION%"
 if !errorlevel! neq 0 exit /b 1
@@ -168,7 +168,7 @@ exit /b 0
 set "data_dir=%~1"
 for %%D in ("%data_dir%") do (
     if not exist "%%D" (
-        mkdir "%%D" 2>nul
+        mkdir "%%D"
         if not exist "%%D" (
             echo     ❌ ERROR: Failed to create directory %%D
             exit /b 1
@@ -180,7 +180,7 @@ exit /b 0
 :configure_db_ini
 set "db_dir=%~1"
 set "version=%~2"
-copy /Y "%OSP_ROOT_DIR%\generate\config\%version%\my.ini" "%db_dir%\my.ini" >nul 2>&1
+copy /Y "%OSP_ROOT_DIR%\generate\config\%version%\my.ini" "%db_dir%\my.ini"
 if !errorlevel! neq 0 (
     echo     ❌ ERROR: Failed to copy my.ini template
     exit /b 1
@@ -190,7 +190,7 @@ exit /b 0
 
 :replace_placeholders
 powershell -NoLogo -NoProfile -Command ^
-  "try { (Get-Content '%~1') -replace '{root_dir}', '%~2' -replace '{module_name}', '%~3' | Set-Content '%~1'; exit 0 } catch { exit 1 }" >nul 2>&1
+  "try { (Get-Content '%~1') -replace '{root_dir}', '%~2' -replace '{module_name}', '%~3' | Set-Content '%~1'; exit 0 } catch { exit 1 }"
 exit /b %errorlevel%
 
 :get_db_startup_params
@@ -234,7 +234,7 @@ echo       🚀 Starting database server for %operation%...
 start "MySQL_%version%_%operation%" bin\mysqld.exe --defaults-file="%db_dir%\my.ini" %DB_STARTUP_PARAMS%
 
 echo       ⏳ Waiting for server to start...
-timeout /t 5 /nobreak > nul
+timeout /t 5 /nobreak
 
 if "%sql_file%" neq "" (
     echo       📜 Executing %operation% SQL...
@@ -245,8 +245,8 @@ if "%sql_file%" neq "" (
 )
 
 echo       🛑 Shutting down database server...
-bin\mysqladmin.exe%db_pipe% --socket=%version% --host="" -u root shutdown >nul 2>&1
-timeout /t 5 /nobreak > nul
+bin\mysqladmin.exe%db_pipe% --socket=%version% --host="" -u root shutdown
+timeout /t 5 /nobreak
 
 if !sql_result! neq 0 (
     echo     ❌ ERROR: %operation% execution failed
@@ -264,15 +264,15 @@ echo       🚀 Starting database server for MySQL X Plugin installation...
 start "MySQL_%version%_mysqlx" bin\mysqld.exe --defaults-file="%db_dir%\my.ini" %DB_STARTUP_PARAMS%
 
 echo       ⏳ Waiting for server to start...
-timeout /t 5 /nobreak > nul
+timeout /t 5 /nobreak
 
 echo       🔌 Installing MySQL X Plugin...
 bin\mysql.exe --defaults-file="%db_dir%\my.ini"%db_pipe% --socket=%version% --host="" -u root mysql -e "INSTALL PLUGIN mysqlx SONAME 'mysqlx.dll';"
 set "plugin_result=!errorlevel!"
 
 echo       🛑 Shutting down database server...
-bin\mysqladmin.exe%db_pipe% --socket=%version% --host="" -u root shutdown >nul 2>&1
-timeout /t 3 /nobreak > nul
+bin\mysqladmin.exe%db_pipe% --socket=%version% --host="" -u root shutdown
+timeout /t 3 /nobreak
 
 if !plugin_result! neq 0 (
     echo     ⚠️  WARNING: MySQL X Plugin installation failed
@@ -294,14 +294,14 @@ call :get_db_startup_params "%version%"
 
 start "MySQL_%version%_timezone" bin\mysqld.exe --defaults-file="%db_dir%\my.ini" %DB_STARTUP_PARAMS%
 
-timeout /t 5 /nobreak > nul
+timeout /t 5 /nobreak
 
 bin\mysql.exe --defaults-file="%db_dir%\my.ini"%db_pipe% --socket=%version% --host="" -u root mysql < "%OSP_ROOT_DIR%\generate\setup\timezone_posix.sql"
 set "timezone_result=!errorlevel!"
 
 echo       🛑 Shutting down database server...
-bin\mysqladmin.exe%db_pipe% --socket=%version% --host="" -u root shutdown >nul 2>&1
-timeout /t 3 /nobreak > nul
+bin\mysqladmin.exe%db_pipe% --socket=%version% --host="" -u root shutdown
+timeout /t 3 /nobreak
 
 if !timezone_result! neq 0 (
     echo     ❌ ERROR: Timezone configuration failed
@@ -318,8 +318,8 @@ exit /b %errorlevel%
 
 :final_cleanup
 set "db_dir=%~1"
-if exist "%db_dir%\temp" rd /s /q "%db_dir%\temp" 2>nul
-del "%db_dir%\ospanel_data\default_data\*.ini" /q >nul 2>&1
-del "%db_dir%\ospanel_data\default_data\*.err" /q >nul 2>&1
-del "%db_dir%\*.ini" /q >nul 2>&1
+if exist "%db_dir%\temp" rd /s /q "%db_dir%\temp"
+del "%db_dir%\ospanel_data\default_data\*.ini" /q
+del "%db_dir%\ospanel_data\default_data\*.err" /q
+del "%db_dir%\*.ini" /q
 exit /b 0
