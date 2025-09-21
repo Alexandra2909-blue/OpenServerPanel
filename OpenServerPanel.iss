@@ -188,6 +188,10 @@ Name: "modules\web";                   Description: "Web Servers";
 Name: "modules\web\apache";            Description: "Apache 2.4";            Types: full compact;                 Flags: disablenouninstallwarning
 Name: "modules\web\nginx";             Description: "Nginx 1.29";            Types: full compact;                 Flags: disablenouninstallwarning
 
+[Dirs]
+
+Name: "{app}\home\full-example.local.osp\backup"; Flags: uninsneveruninstall; Components: core; Permissions: users-full 
+
 [Files]
 
 Source: "resources\dist\CheckSSE42.dll";                          Flags: dontcopy
