@@ -6,16 +6,13 @@
 # Author:      OSPanel Dev Team
 # ================================================================================
 
-$env:LC_ALL = "en_US.UTF-8"; $env:LANG = "en_US.UTF-8"
-$env:TEMP = "A:"
-
 # ================== SCRIPT CONFIGURATION ==================
 $JsonPath       = "..\resources\matrix\matrix-infodata.json"
 $BinMatrixPath  = "..\resources\matrix\matrix-bin.json"
 $BaseAddonsDir  = "..\addons"
 $BaseBinDir     = "..\bin"
 $CacheDir       = "..\cache"  # Cache directory for downloaded files
-$UseProxy       = $true
+$UseProxy       = $false
 $ProxyUrl       = "127.0.0.1:1086"
 # ==========================================================
 
