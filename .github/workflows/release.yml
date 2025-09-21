@@ -23,23 +23,6 @@ jobs:
           git lfs install
           git lfs pull
 
-      # ВОССТАНОВЛЕНИЕ КЭША ЗАГРУЗОК
-      - name: Restore downloads cache
-        uses: actions/cache@v4
-        with:
-          path: cache
-          key: downloads-${{ inputs.version }}-${{ hashFiles('resources/matrix/*.json', 'generate/genall.ps1', 'resources/composer/*') }}
-          restore-keys: |
-            downloads-${{ inputs.version }}-
-            downloads-
-
-      # На случай первого запуска — создаём папку кэша
-      - name: Ensure cache folder exists
-        shell: pwsh
-        run: |
-          if (-not (Test-Path "cache")) { New-Item -ItemType Directory -Path "cache" -Force | Out-Null }
-          Write-Host "Cache folder ready: $(Resolve-Path cache)"
-
       - name: Remove old Inno Setup (if exists)
         shell: pwsh
         run: |
@@ -80,47 +63,6 @@ jobs:
 
           Write-Host "Set AppVersion to $ver and AppVersion_ to $verUnderscore in OpenServerPanel.iss"
 
-      # Подготовка данных PostgreSQL: очистка/ACL для data и temp
-      - name: Prepare PostgreSQL data dirs (reset ACL and owner)
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-
-          function Reset-AclRecursive {
-            param([string]$Path)
-            if (-not (Test-Path $Path)) { return }
-
-            attrib -r -h -s "$Path" /S /D 2>$null
-            icacls "$Path" /inheritance:e /T /C | Out-Null
-
-            try { Remove-Item "$Path" -Recurse -Force -ErrorAction SilentlyContinue } catch {}
-            New-Item -ItemType Directory -Force -Path "$Path" | Out-Null
-
-            icacls "$Path" /inheritance:d /T /C | Out-Null
-
-            $me = "$env:USERDOMAIN\$env:USERNAME"
-            takeown /F "$Path" /R /D Y | Out-Null
-            cmd /c "icacls ""$Path"" /setowner ""$me"" /T /C" | Out-Null
-
-            icacls "$Path" /grant:r "${me}:(OI)(CI)F" /T /C | Out-Null
-            icacls "$Path" /grant:r "*S-1-5-18:(OI)(CI)F" /T /C | Out-Null      # SYSTEM
-            icacls "$Path" /grant:r "*S-1-5-32-545:(OI)(CI)F" /T /C | Out-Null  # BUILTIN\Users
-
-            attrib -r -h -s "$Path" /S /D 2>$null
-          }
-
-          $modules = Join-Path (Get-Location) 'modules'
-          $pgVers = 11..17 | ForEach-Object { "PostgreSQL-$_" }
-          foreach ($v in $pgVers) {
-            $mod   = Join-Path $modules $v
-            $data  = Join-Path $mod 'ospanel_data\default_data'
-            $tmp   = Join-Path $mod 'temp'
-            Reset-AclRecursive -Path $data
-            Reset-AclRecursive -Path $tmp
-          }
-
-          Start-Sleep -Seconds 2
-
       - name: Run generators (genall.ps1 and gendb.bat)
         shell: pwsh
         env:
@@ -129,15 +71,6 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if (-not (Test-Path $env:TEMP)) { New-Item -ItemType Directory -Force -Path $env:TEMP | Out-Null }
-
-          # Листинг кэша перед генерацией (для диагностики)
-          if (Test-Path "..\cache") {
-            Write-Host "Pre-run cache listing (..\\cache):"
-            Get-ChildItem -Recurse -Force "..\cache" | Select-Object FullName, Length | Format-Table -AutoSize
-          } elseif (Test-Path "cache") {
-            Write-Host "Pre-run cache listing (cache):"
-            Get-ChildItem -Recurse -Force "cache" | Select-Object FullName, Length | Format-Table -AutoSize
-          }
 
           Set-Location generate
           # genall.ps1 использует $CacheDir = "..\cache" — это указывает на корневую папку cache
@@ -161,23 +94,4 @@ jobs:
         with:
           name: open-server-panel-setup
           path: release/*.exe
-
-      # Диагностика содержимого кэша перед сохранением
-      - name: List cache dir
-        if: always()
-        shell: pwsh
-        run: |
-          if (Test-Path "cache") {
-            Write-Host "Post-run cache listing:"
-            Get-ChildItem -Recurse -Force "cache" | Select-Object FullName, Length | Format-Table -AutoSize
-          } else {
-            Write-Host "Cache directory not found."
-          }
-
-      # СОХРАНЕНИЕ КЭША ПОСЛЕ СБОРКИ
-      - name: Save downloads cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: cache
-          key: downloads-${{ inputs.version }}-${{ hashFiles('resources/matrix/*.json', 'generate/genall.ps1', 'resources/composer/*') }}
+  
