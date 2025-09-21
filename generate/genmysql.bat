@@ -105,7 +105,7 @@ call :initialize_database "%VERSION%" "%db_dir%" "%data_dir%"
 if !errorlevel! neq 0 exit /b 1
 
 echo     ⏳ Waiting for installation to complete...
-timeout /t 3 /nobreak
+ping -n 3 127.0.0.1
 
 :: Clean up temporary ini files
 del "*.ini" /q
@@ -126,7 +126,7 @@ call :configure_timezone "%db_dir%" "%VERSION%"
 if !errorlevel! neq 0 exit /b 1
 
 echo     ⏳ Waiting for timezone configuration to complete...
-timeout /t 3 /nobreak
+ping -n 3 127.0.0.1
 
 :: Execute main installation SQL
 echo     🔧 Running main installation script...
@@ -234,7 +234,7 @@ echo       🚀 Starting database server for %operation%...
 start "MySQL_%version%_%operation%" bin\mysqld.exe --defaults-file="%db_dir%\my.ini" %DB_STARTUP_PARAMS%
 
 echo       ⏳ Waiting for server to start...
-timeout /t 5 /nobreak
+ping -n 5 127.0.0.1
 
 if "%sql_file%" neq "" (
     echo       📜 Executing %operation% SQL...
@@ -246,7 +246,7 @@ if "%sql_file%" neq "" (
 
 echo       🛑 Shutting down database server...
 bin\mysqladmin.exe%db_pipe% --socket=%version% --host="" -u root shutdown
-timeout /t 5 /nobreak
+ping -n 5 127.0.0.1
 
 if !sql_result! neq 0 (
     echo     ❌ ERROR: %operation% execution failed
@@ -264,7 +264,7 @@ echo       🚀 Starting database server for MySQL X Plugin installation...
 start "MySQL_%version%_mysqlx" bin\mysqld.exe --defaults-file="%db_dir%\my.ini" %DB_STARTUP_PARAMS%
 
 echo       ⏳ Waiting for server to start...
-timeout /t 5 /nobreak
+ping -n 5 127.0.0.1
 
 echo       🔌 Installing MySQL X Plugin...
 bin\mysql.exe --defaults-file="%db_dir%\my.ini"%db_pipe% --socket=%version% --host="" -u root mysql -e "INSTALL PLUGIN mysqlx SONAME 'mysqlx.dll';"
@@ -272,7 +272,7 @@ set "plugin_result=!errorlevel!"
 
 echo       🛑 Shutting down database server...
 bin\mysqladmin.exe%db_pipe% --socket=%version% --host="" -u root shutdown
-timeout /t 3 /nobreak
+ping -n 3 127.0.0.1
 
 if !plugin_result! neq 0 (
     echo     ⚠️  WARNING: MySQL X Plugin installation failed
@@ -294,14 +294,14 @@ call :get_db_startup_params "%version%"
 
 start "MySQL_%version%_timezone" bin\mysqld.exe --defaults-file="%db_dir%\my.ini" %DB_STARTUP_PARAMS%
 
-timeout /t 5 /nobreak
+ping -n 5 127.0.0.1
 
 bin\mysql.exe --defaults-file="%db_dir%\my.ini"%db_pipe% --socket=%version% --host="" -u root mysql < "%OSP_ROOT_DIR%\generate\setup\timezone_posix.sql"
 set "timezone_result=!errorlevel!"
 
 echo       🛑 Shutting down database server...
 bin\mysqladmin.exe%db_pipe% --socket=%version% --host="" -u root shutdown
-timeout /t 3 /nobreak
+ping -n 3 127.0.0.1
 
 if !timezone_result! neq 0 (
     echo     ❌ ERROR: Timezone configuration failed
