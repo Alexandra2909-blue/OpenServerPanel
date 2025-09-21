@@ -17,14 +17,16 @@ chcp 65001 >nul
 TITLE DB Generator
 
 :: ------------------------------------------------------------------------------
-:: Run MySQL/MariaDB generators (оставлены как есть)
+:: Run MySQL/MariaDB generators
 :: ------------------------------------------------------------------------------
+
 call "%OSP_ROOT_DIR%\generate\genmariadb.bat"
 call "%OSP_ROOT_DIR%\generate\genmysql.bat"
 
 :: ------------------------------------------------------------------------------
 :: PostgreSQL init per version
 :: ------------------------------------------------------------------------------
+
 call :postgresql PostgreSQL-11
 call :postgresql PostgreSQL-12
 call :postgresql PostgreSQL-13
@@ -39,6 +41,7 @@ goto end
 :: INIT PostgreSQL (robust, no PowerShell, safe dirs, clean start)
 :: Args: %1 = module name, e.g. PostgreSQL-15
 :: --------------------------------------------------------------------------------
+
 :postgresql
 setlocal EnableDelayedExpansion
 
@@ -70,37 +73,6 @@ if not exist "%DATA_DIR%" (
   endlocal & exit /b 1
 )
 
-:: Подготовка шаблонов конфигурации
-set "SRC_CONF=%OSP_ROOT_DIR%\generate\config\PostgreSQL\postgresql.conf"
-set "SRC_HBA=%OSP_ROOT_DIR%\generate\config\PostgreSQL\pg_hba.conf"
-
-:: Если есть шаблоны — скопируем их в data (initdb позже перезапишет своими дефолтами некоторые опции,
-:: мы заменим файлы после initdb ещё раз при необходимости).
-if exist "%SRC_CONF%" (
-  copy /Y "%SRC_CONF%" "%DATA_DIR%\postgresql.conf" >nul
-)
-if exist "%SRC_HBA%" (
-  copy /Y "%SRC_HBA%" "%DATA_DIR%\pg_hba.conf" >nul
-)
-
-:: Подстановка плейсхолдеров в конфиги (если файлы существуют)
-:: В конфиге обычно удобнее использовать прямые слэши:
-set "ROOT_DIR_ESC=%OSP_ROOT_DIR:\=/%"
-for %%F in ("postgresql.conf" "pg_hba.conf") do (
-  if exist "%DATA_DIR%\%%~F" (
-    set "TMPF=%DATA_DIR%\%%~nF.tmp"
-    > "!TMPF!" (
-      for /f "usebackq delims=" %%L in ("%DATA_DIR%\%%~F") do (
-        set "line=%%L"
-        set "line=!line:{root_dir}=%ROOT_DIR_ESC%!"
-        set "line=!line:{module_name}=%MODULE%!"
-        echo(!line!
-      )
-    )
-    move /y "!TMPF!" "%DATA_DIR%\%%~F" >nul
-  )
-)
-
 :: Переменные окружения для initdb/psql
 set "PGDATA=%DATA_DIR%"
 set "PGCLIENTENCODING=utf-8"
@@ -108,7 +80,7 @@ set "PGHOST=127.0.0.1"
 set "PGLOCALEDIR=%DB_DIR%\share\locale"
 set "PGSSLMODE=disable"
 set "PGSYSCONFDIR=%DATA_DIR%"
-set "PGTZ={time_zone}"
+set "PGTZ=Etc/GMT-3"
 set "PGUSER=postgres"
 
 :: Назначение порта (если когда-либо понадобится запускать сервер в этом же скрипте)
@@ -129,11 +101,7 @@ if not "!ec!"=="0" (
 )
 
 :: После initdb: у initdb создаются собственные postgresql.conf/pg_hba.conf.
-:: Если нужно принудительно заменить на наши шаблоны ещё раз — раскомментируйте:
-:: if exist "%SRC_CONF%" copy /Y "%SRC_CONF%" "%DATA_DIR%\postgresql.conf" >nul
-:: if exist "%SRC_HBA%"  copy /Y "%SRC_HBA%"  "%DATA_DIR%\pg_hba.conf"  >nul
-:: и повторите подстановку плейсхолдеров:
-:: for %%F in ("postgresql.conf" "pg_hba.conf") do ( ... )
+del "%DATA_DIR%\pg_hba.conf" "%DATA_DIR%\postgresql.conf"
 
 :: Удаляем временный каталог
 if exist "%TMP_DIR%" rd /s /q "%TMP_DIR%"
