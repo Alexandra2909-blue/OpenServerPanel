@@ -990,27 +990,6 @@
                 "version": "8.0.13"
             }
         },
-        "MySQL-5.6":
-        {
-            "docs":
-            {
-                "English": "https://dev.mysql.com/doc/refman/5.6/en/"
-            },
-            "DownloadUrl": "https://downloads.mysql.com/archives/get/p/23/file/mysql-5.6.51-winx64.zip",
-            "help": "--help",
-            "main":
-            {
-                "architecture": "x64",
-                "category": "MySQL",
-                "ip_separator": "no",
-                "ipv6_support": "yes",
-                "license": "https://downloads.mysql.com/docs/licenses/mysqld-5.6-gpl-en.pdf",
-                "license_type": "GNU GPLv2",
-                "min_windows_ver": "6.1.7601",
-                "timestamp": "1651770000",
-                "version": "5.6.51"
-            }
-        },
         "MySQL-5.7":
         {
             "docs":
