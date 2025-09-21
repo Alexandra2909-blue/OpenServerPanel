@@ -3,8 +3,8 @@ name: Build Open Server Panel
 on:
   workflow_dispatch:
     inputs:
-      release_version:
-        description: 'Release version (e.g. v1.2.3)'
+      version:
+        description: 'Version (e.g. 6.4.0)'
         required: true
         type: string
 
@@ -34,13 +34,43 @@ jobs:
           Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "innosetup.exe"
           Start-Process .\innosetup.exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
 
+      - name: Set version in OpenServerPanel.iss
+        shell: pwsh
+        run: |
+          $ver = "${{ inputs.version }}"
+          if ([string]::IsNullOrWhiteSpace($ver)) {
+            Write-Error "Version input is empty."
+            exit 1
+          }
+          if ($ver -notmatch '^\d+(\.\d+)*$') {
+            Write-Error "Version must look like 6.4.0"
+            exit 1
+          }
+          $verUnderscore = $ver -replace '\.', '_'
+
+          $issPath = "OpenServerPanel.iss"
+          if (-not (Test-Path $issPath)) {
+            Write-Error "OpenServerPanel.iss not found at $issPath"
+            exit 1
+          }
+
+          $content = Get-Content -Raw -Path $issPath
+
+          # Обновляем/вставляем строки с #define в начале файла
+          $content = $content -replace '(?m)^\#define\s+AppVersion\s+.*$', "#define AppVersion      `"$ver`""
+          $content = $content -replace '(?m)^\#define\s+AppVersion_\s+.*$', "#define AppVersion_     `"$verUnderscore`""
+
+          Set-Content -Path $issPath -Value $content -Encoding UTF8
+
+          Write-Host "Set AppVersion to $ver and AppVersion_ to $verUnderscore in OpenServerPanel.iss"
+
       - name: Run generators (genall.ps1 and gendb.bat)
         shell: pwsh
         run: |
           Set-Location generate
           # Выполнить PowerShell-скрипт
           .\genall.ps1
-          # Выполнить батник (через cmd)
+          # Выполнить батник (через cmd, чтобы соблюсти кодовую страницу cmd)
           cmd /c gendb.bat
           Set-Location ..
 
@@ -53,3 +83,9 @@ jobs:
             exit 1
           }
           & $iscc "OpenServerPanel.iss"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-server-panel-setup
+          path: release/*.exe
