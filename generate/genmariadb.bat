@@ -107,7 +107,7 @@ if !errorlevel! neq 0 (
 )
 
 echo     ⏳ Waiting for installation to complete...
-timeout /t 3 /nobreak
+ping -n 3 127.0.0.1
 
 :: Clean up temporary ini files
 del "*.ini" /q
@@ -124,7 +124,7 @@ call :configure_timezone "%db_dir%" "%VERSION%"
 if !errorlevel! neq 0 exit /b 1
 
 echo     ⏳ Waiting for timezone configuration to complete...
-timeout /t 3 /nobreak
+ping -n 3 127.0.0.1
 
 :: Execute main installation SQL
 echo     🔧 Running main installation script...
@@ -214,7 +214,7 @@ echo       🚀 Starting database server for %operation%...
 start "MySQL_%version%_%operation%" bin\mysqld.exe --defaults-file="%db_dir%\my.ini" %DB_STARTUP_PARAMS%
 
 echo       ⏳ Waiting for server to start...
-timeout /t 5 /nobreakl
+ping -n 5 127.0.0.1
 
 if "%sql_file%" neq "" (
     echo       📜 Executing %operation% SQL...
@@ -226,7 +226,7 @@ if "%sql_file%" neq "" (
 
 echo       🛑 Shutting down database server...
 bin\mysqladmin.exe --protocol=PIPE --socket=%version% --host="" -u root shutdown
-timeout /t 5 /nobreak
+ping -n 5 127.0.0.1
 
 if !sql_result! neq 0 (
     echo     ❌ ERROR: %operation% execution failed
