@@ -1,0 +1,55 @@
+name: Build Open Server Panel
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version (e.g. v1.2.3)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout repo with LFS
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Ensure LFS files are pulled
+        run: |
+          git lfs install
+          git lfs pull
+
+      - name: Remove old Inno Setup (if exists)
+        run: |
+          if (Test-Path "C:\Program Files (x86)\Inno Setup 6") {
+            Remove-Item "C:\Program Files (x86)\Inno Setup 6" -Recurse -Force
+          }
+
+      - name: Download and install Inno Setup 6
+        run: |
+          Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "innosetup.exe"
+          Start-Process .\innosetup.exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+
+      - name: Run generators (genall.ps1 and gendb.bat)
+        shell: pwsh
+        run: |
+          Set-Location generate
+          # Выполнить PowerShell-скрипт
+          .\genall.ps1
+          # Выполнить батник (через cmd)
+          cmd /c gendb.bat
+          Set-Location ..
+
+      - name: Compile installer (OpenServerPanel.iss)
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            Write-Error "Inno Setup ISCC.exe not found at $iscc"
+            exit 1
+          }
+          & $iscc "OpenServerPanel.iss"
