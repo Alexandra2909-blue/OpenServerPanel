@@ -256,7 +256,6 @@ echo %ESC%[32mdust%ESC%[0m                        {lang_utilite_dust}
 echo %ESC%[32mfd%ESC%[0m                          {lang_utilite_fd}
 echo %ESC%[32mgeoiplookup%ESC%[0m                 {lang_utilite_geoiplookup6}
 echo %ESC%[32mgeoiplookup6%ESC%[0m                {lang_utilite_geoiplookup6}
-echo %ESC%[32mgzip%ESC%[0m                        {lang_utilite_gzip}
 echo %ESC%[32mjq%ESC%[0m                          {lang_utilite_jq}
 echo %ESC%[32mmmdbinspect%ESC%[0m                 {lang_utilite_mmdbinspect}
 echo %ESC%[32moha%ESC%[0m                         {lang_utilite_oha}
