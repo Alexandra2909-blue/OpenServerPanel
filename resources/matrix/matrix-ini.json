@@ -10002,7 +10002,7 @@
         {
             "parameter": "opcache.file_cache",
             "extension": "opcache",
-            "use": true,
+            "use": false,
             "php_versions":
             {
                 "7.2": "\"{root_dir}/temp/{module_name}/{profile_name}/opcache\"",
