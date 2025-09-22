@@ -131,12 +131,12 @@ if /i "%1"=="tasks"       goto request
 if /i "%1"=="use"         goto env_set
 if /i "%1"=="-v" (
     echo:
-    echo {lang_version_info}: Open Server Panel v%OSP_VERSION% x64 {osp_version_datetime}
+    echo {lang_version_info}: Open Server Panel v%OSP_VERSION% x64
     goto end
 )
 if /i "%1"=="version" (
     echo:
-    echo {lang_version_info}: Open Server Panel v%OSP_VERSION% x64 {osp_version_datetime}
+    echo {lang_version_info}: Open Server Panel v%OSP_VERSION% x64
     goto end
 )
 
