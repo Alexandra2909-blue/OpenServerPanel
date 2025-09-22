@@ -190,7 +190,7 @@ Name: "modules\web\nginx";             Description: "Nginx 1.29";            Typ
 
 [Dirs]
 
-Name: "{app}\home\full-example.local.osp\backup"; Flags: uninsneveruninstall; Components: core; Permissions: users-full 
+Name: "{app}\home\full-example.local\.osp\backup"; Flags: uninsneveruninstall; Components: core; Permissions: users-full 
 
 [Files]
 
