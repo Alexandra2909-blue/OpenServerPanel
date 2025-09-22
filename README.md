@@ -35,7 +35,7 @@
 
 ### Auxiliary utilities
 
-![](https://img.shields.io/badge/aria2c-1.37-7aba03) ![](https://img.shields.io/badge/bat-0.25-7aba03) ![](https://img.shields.io/badge/brotli-1.1-7aba03) ![](https://img.shields.io/badge/curl-8.16-7aba03) ![](https://img.shields.io/badge/dust-1.2-7aba03) ![](https://img.shields.io/badge/fd-10.3-7aba03) ![](https://img.shields.io/badge/gzip-1.14-7aba03) ![](https://img.shields.io/badge/jq-1.8-7aba03) ![](https://img.shields.io/badge/mmdbinspect-2.0-7aba03) ![](https://img.shields.io/badge/oha-1.9-7aba03) ![](https://img.shields.io/badge/sass-1.92-7aba03) ![](https://img.shields.io/badge/sd-1.0-7aba03) ![](https://img.shields.io/badge/sqlite3-3.50-7aba03) ![](https://img.shields.io/badge/wget-1.21-7aba03) ![](https://img.shields.io/badge/xh-0.24-7aba03)
+![](https://img.shields.io/badge/aria2c-1.37-7aba03) ![](https://img.shields.io/badge/bat-0.25-7aba03) ![](https://img.shields.io/badge/brotli-1.1-7aba03) ![](https://img.shields.io/badge/curl-8.16-7aba03) ![](https://img.shields.io/badge/dust-1.2-7aba03) ![](https://img.shields.io/badge/fd-10.3-7aba03) ![](https://img.shields.io/badge/jq-1.8-7aba03) ![](https://img.shields.io/badge/mmdbinspect-2.0-7aba03) ![](https://img.shields.io/badge/oha-1.9-7aba03) ![](https://img.shields.io/badge/sass-1.93-7aba03) ![](https://img.shields.io/badge/sd-1.0-7aba03) ![](https://img.shields.io/badge/sqlite3-3.50-7aba03) ![](https://img.shields.io/badge/wget-1.21-7aba03) ![](https://img.shields.io/badge/xh-0.25-7aba03)
 
 ### Distinctive сharacteristics
 
