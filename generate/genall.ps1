@@ -911,6 +911,7 @@ function Copy-AdditionalFiles {
 
     $localCopies = @{
         "..\resources\dist\README.txt" = "..\user\geo\README.txt"
+        "..\resources\dist\top.html" = "..\modules\Apache\error\include\top.html"
         "..\bin\bat.exe" = "..\system\bin\bat.exe"
         "..\bin\curl.exe" = "..\system\bin\curl.exe"
         "..\bin\libcurl-x64.dll" = "..\system\bin\libcurl-x64.dll"
@@ -1275,7 +1276,7 @@ function Generate-PHPExtIni {
             }
         } catch { Write-Warning "Error loading extension comments: $_" }
     }
-    $mandatoryList = @("mbstring", "openssl", "apcu", "igbinary", "msgpack", "brotli", "lz4", "lzf", "zstd", "sockets", "psr", "curl")
+    $mandatoryList = @("mbstring", "openssl", "apcu", "igbinary", "msgpack", "brotli", "lz4", "lzf", "zstd", "sockets", "curl")
     $commonList = @("bz2","crypto","enchant","exif","fileinfo","ftp","gd","gd2","gettext","gmp","hrtime","imap","intl","mailparse","mcrypt","memcache","memcached","mysqli","odbc","pdo_mysql","pdo_sqlite","redis","scrypt","soap","sodium","sqlite3","timezonedb","xmlrpc","xsl","yaml","zip")
     $zendList = @("opcache","xdebug","scoutapm")
     function Format-ExtensionLine {
