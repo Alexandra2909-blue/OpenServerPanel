@@ -9,7 +9,7 @@
     },
     {
         "name": "dart-sass",
-        "url": "https://github.com/sass/dart-sass/releases/download/1.93.0/dart-sass-1.93.0-windows-x64.zip",
+        "url": "https://github.com/sass/dart-sass/releases/download/1.93.2/dart-sass-1.93.2-windows-x64.zip",
         "extract_path": "dart*\\src",
         "files": ["dart.exe", "sass.snapshot"],
         "copy_files": ["..\\resources\\dist\\sass.bat"],
