@@ -387,25 +387,17 @@
             <td>Открыть окно настроек программы</td>
         </tr>
     </table>
-    <p>Помимо шаблонных переменных, можно использовать любые переменные среды Windows, например: %COMSPEC%, %SYSTEMDRIVE%, %USERNAME%, %PATH% и т.д.</p>
-    <h3>Примеры использования</h3>
+    <p>Помимо шаблонных переменных, можно использовать любые переменные среды Windows, например: %SYSTEMROOT%, %SYSTEMDRIVE%, %USERNAME%, %PATH% и т.д.</p>
+    <h3>Пример использования</h3>
     <pre class="code">
-[21]
-
-caption  = Открыть в PhpStorm
-category = projects
-command  = "%COMSPEC%" /c "osp project {host_decoded} & start "" "C:\chrome.exe" "{project_dir}""
-hide     = on
-icon     = code
-
-[22]
+[bookmark_1]
 
 caption  = Google
 category = Мои Закладки\Поисковые системы
-command  = "%COMSPEC%" /c "start "" "https://google.com""
+command  = cmd.exe /c "start "" "https://google.com""
 hide     = on
 icon     = bookmark</pre>
-    <h3>Опции `cmd.exe`</h3>
+    <h3>Опции CMD.EXE</h3>
     <ul>
         <li>/c: Выполнить команду и закрыть терминал.</li>
         <li>/k: Выполнить команду и оставить терминал открытым.</li>
