@@ -12,6 +12,7 @@
 @set "OSP_ADDONS_LIST={addons_list}"
 @set "OSP_ADDONS_LIST_=:%OSP_ADDONS_LIST: =:%:"
 @set "OSP_PROG_LIST=curl ospurl tail fd bat getbit getparent ansicon colortest"
+@set "CURL_CA_BUNDLE={root_dir}\data\ssl\cacert.pem"
 
 :: Checking and configuring ANSI for terminal
 
