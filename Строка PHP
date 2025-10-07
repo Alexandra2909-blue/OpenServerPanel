@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<?php
+$name = "Саша";
+echo "Имя компьютерщика $name";
+echo 'Имя компьютерщика $name';
+
+</body>
+</html>
